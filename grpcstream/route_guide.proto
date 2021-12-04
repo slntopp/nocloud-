@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option go_package = "github.com/EwRvp7LV7/nocloud-tunnel-mesh";
+
+package grpcstream;
+
+// Interface exported by the server.
+service RouteGuide {
+  rpc RouteChat(stream RouteNote) returns (stream RouteNote) {}
+}
+
+message RouteNote {
+  string message = 2;
+}

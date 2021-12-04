@@ -1,0 +1,7 @@
+[
+  {
+    "username" : "user1",
+    "password" : "pass1",
+    "address" : "localhost:10000"
+  }
+]
