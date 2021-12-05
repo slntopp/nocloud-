@@ -28,6 +28,10 @@ func runRouteChat1(client pb.RouteGuideClient) {
 	}
 	// waitc := make(chan struct{})
 
+	if err := stream.Send(&pb.RouteNote{Message: "Hello, server!"}); err != nil {
+		log.Fatalf("Failed to send a note: %v", err)
+	}
+
 	// go func() {
 	for {
 		in, err := stream.Recv()

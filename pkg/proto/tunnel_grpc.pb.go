@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TunnelClient interface {
-	InitTunnel(ctx context.Context, in *InitTunnelRequest, opts ...grpc.CallOption) (Tunnel_InitTunnelClient, error)
+	InitTunnel(ctx context.Context, opts ...grpc.CallOption) (Tunnel_InitTunnelClient, error)
 	SendData(ctx context.Context, in *SendDataRequest, opts ...grpc.CallOption) (*SendDataResponse, error)
 }
 
@@ -30,28 +30,27 @@ func NewTunnelClient(cc grpc.ClientConnInterface) TunnelClient {
 	return &tunnelClient{cc}
 }
 
-func (c *tunnelClient) InitTunnel(ctx context.Context, in *InitTunnelRequest, opts ...grpc.CallOption) (Tunnel_InitTunnelClient, error) {
+func (c *tunnelClient) InitTunnel(ctx context.Context, opts ...grpc.CallOption) (Tunnel_InitTunnelClient, error) {
 	stream, err := c.cc.NewStream(ctx, &Tunnel_ServiceDesc.Streams[0], "/tunnel.Tunnel/InitTunnel", opts...)
 	if err != nil {
 		return nil, err
 	}
 	x := &tunnelInitTunnelClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
 	return x, nil
 }
 
 type Tunnel_InitTunnelClient interface {
+	Send(*InitTunnelRequest) error
 	Recv() (*StreamData, error)
 	grpc.ClientStream
 }
 
 type tunnelInitTunnelClient struct {
 	grpc.ClientStream
+}
+
+func (x *tunnelInitTunnelClient) Send(m *InitTunnelRequest) error {
+	return x.ClientStream.SendMsg(m)
 }
 
 func (x *tunnelInitTunnelClient) Recv() (*StreamData, error) {
@@ -75,7 +74,7 @@ func (c *tunnelClient) SendData(ctx context.Context, in *SendDataRequest, opts .
 // All implementations must embed UnimplementedTunnelServer
 // for forward compatibility
 type TunnelServer interface {
-	InitTunnel(*InitTunnelRequest, Tunnel_InitTunnelServer) error
+	InitTunnel(Tunnel_InitTunnelServer) error
 	SendData(context.Context, *SendDataRequest) (*SendDataResponse, error)
 	mustEmbedUnimplementedTunnelServer()
 }
@@ -84,7 +83,7 @@ type TunnelServer interface {
 type UnimplementedTunnelServer struct {
 }
 
-func (UnimplementedTunnelServer) InitTunnel(*InitTunnelRequest, Tunnel_InitTunnelServer) error {
+func (UnimplementedTunnelServer) InitTunnel(Tunnel_InitTunnelServer) error {
 	return status.Errorf(codes.Unimplemented, "method InitTunnel not implemented")
 }
 func (UnimplementedTunnelServer) SendData(context.Context, *SendDataRequest) (*SendDataResponse, error) {
@@ -104,15 +103,12 @@ func RegisterTunnelServer(s grpc.ServiceRegistrar, srv TunnelServer) {
 }
 
 func _Tunnel_InitTunnel_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(InitTunnelRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(TunnelServer).InitTunnel(m, &tunnelInitTunnelServer{stream})
+	return srv.(TunnelServer).InitTunnel(&tunnelInitTunnelServer{stream})
 }
 
 type Tunnel_InitTunnelServer interface {
 	Send(*StreamData) error
+	Recv() (*InitTunnelRequest, error)
 	grpc.ServerStream
 }
 
@@ -122,6 +118,14 @@ type tunnelInitTunnelServer struct {
 
 func (x *tunnelInitTunnelServer) Send(m *StreamData) error {
 	return x.ServerStream.SendMsg(m)
+}
+
+func (x *tunnelInitTunnelServer) Recv() (*InitTunnelRequest, error) {
+	m := new(InitTunnelRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func _Tunnel_SendData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -159,6 +163,7 @@ var Tunnel_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "InitTunnel",
 			Handler:       _Tunnel_InitTunnel_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "pkg/proto/tunnel.proto",

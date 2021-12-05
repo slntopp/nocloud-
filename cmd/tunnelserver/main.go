@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net"
+	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -38,27 +40,59 @@ func (s *tunnelServer) SendData(ctx context.Context, req *pb.SendDataRequest) (*
 	return &pb.SendDataResponse{Result: true}, nil
 }
 
-func (s *tunnelServer) InitTunnel(req *pb.InitTunnelRequest, stream pb.Tunnel_InitTunnelServer) error {
+// func (s *tunnelServer) InitTunnel(req *pb.InitTunnelRequest, stream pb.Tunnel_InitTunnelServer) error {
+func (*tunnelServer) InitTunnel(stream pb.Tunnel_InitTunnelServer) error {
 	fmt.Println("Got streaming connection request")
-	s.conns[req.GetHost()] = stream
+	// s.conns[req.GetHost()] = stream
+	// for {
+	// 	err := stream.RecvMsg(nil)
+	// 	fmt.Printf("Possible Error receiving from Stream: %w\n", err)
+	// 	if err == io.EOF {
+	// 		delete(s.conns, req.GetHost())
+	// 		return nil
+	// 	}
+	// 	if err != nil {
+	// 		delete(s.conns, req.GetHost())
+	// 		return err
+	// 	}
+	// }
+
+	go func() {
+		stdreader := bufio.NewReader(os.Stdin)
+
+		for {
+			myFPass, _ := stdreader.ReadString('\n')
+			notes := []*pb.StreamData{
+				{Message: myFPass},
+			}
+			for _, note := range notes {
+				if err := stream.Send(note); err != nil {
+					log.Fatalf("Failed to send a note: %v", err)
+				}
+			}
+
+		}
+	}()
+
 	for {
-		err := stream.RecvMsg(nil)
-		fmt.Printf("Possible Error receiving from Stream: %w\n", err)
+		in, err := stream.Recv()
 		if err == io.EOF {
-			delete(s.conns, req.GetHost())
 			return nil
 		}
 		if err != nil {
-			delete(s.conns, req.GetHost())
 			return err
 		}
+
+		log.Printf("Hello from client to server! %s", in.Host)
+		fmt.Print("m2c > ")
 	}
+
 }
 
-func newServer() *tunnelServer {
-	s := &tunnelServer{conns: make(map[string]pb.Tunnel_InitTunnelServer)}
-	return s
-}
+// func newServer() *tunnelServer {
+// 	s := &tunnelServer{conns: make(map[string]pb.Tunnel_InitTunnelServer)}
+// 	return s
+// }
 
 func main() {
 	flag.Parse()
@@ -68,7 +102,8 @@ func main() {
 	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
-	pb.RegisterTunnelServer(grpcServer, newServer())
+	// pb.RegisterTunnelServer(grpcServer, newServer())
+	pb.RegisterTunnelServer(grpcServer, &tunnelServer{})
 	fmt.Printf("gRPC-Server Listening on localhost:%d\n", *port)
-	grpcServer.Serve(lis)	
+	grpcServer.Serve(lis)
 }
