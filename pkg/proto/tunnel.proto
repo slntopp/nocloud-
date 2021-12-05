@@ -1,7 +1,7 @@
 syntax = "proto3";
 package tunnel;
 
-option go_package = "github.com/EwRvp7LV7/nocloud-tunnel-mesh";
+option go_package = "github.com/slntopp/nocloud-tunnel-mesh";
 
 message InitTunnelRequest {
     string host = 1;

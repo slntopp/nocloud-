@@ -4,7 +4,7 @@ import (
 	"log"
 	"net"
 
-	server "github.com/EwRvp7LV7/nocloud-tunnel-mesh/soket/0server"
+	server "github.com/slntopp/nocloud-tunnel-mesh/soket/0server"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	client "github.com/EwRvp7LV7/nocloud-tunnel-mesh/soket/1client"
+	client "github.com/slntopp/nocloud-tunnel-mesh/soket/1client"
 )
 
 const (

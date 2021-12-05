@@ -12,7 +12,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	pb "github.com/EwRvp7LV7/nocloud-tunnel-mesh/grpcstream"
+	pb "github.com/slntopp/nocloud-tunnel-mesh/grpcstream"
 )
 
 var (

@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 
-	pb "github.com/EwRvp7LV7/nocloud-tunnel-mesh/grpcstream"
+	pb "github.com/slntopp/nocloud-tunnel-mesh/grpcstream"
 	"google.golang.org/grpc"
 )
 

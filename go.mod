@@ -1,4 +1,4 @@
-module github.com/EwRvp7LV7/nocloud-tunnel-mesh
+module github.com/slntopp/nocloud-tunnel-mesh
 
 go 1.17
 
