@@ -7,6 +7,6 @@ services:
       TUNNEL_HOST: tunnelserver:8080
   tunnelserver:
     #container_name: gprs-server
-    image: ghcr.io/slntopp/nocloud-tunnel-mesh/apiserver-web:latest
+    image: ghcr.io/slntopp/nocloud-tunnel-mesh/tunnelserver:latest
     ports:
-      - 8080:8080
+      - 18080:8080
