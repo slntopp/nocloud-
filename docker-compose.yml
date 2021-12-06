@@ -1,24 +1,12 @@
 version: "3.8"
 services:
-  health:
-    container_name: gprs-client
-    image: ghcr.io/slntopp/nocloud/health:latest
-    networks:
-      - grpc-internal
-  apiserver-web:
-    container_name: gprs-server
-    image: ghcr.io/slntopp/nocloud/apiserver-web:latest
+  tunnelclient:
+    #container_name: tunnelclient
+    image: ghcr.io/slntopp/nocloud-tunnel-mesh/tunnelclient:latest
     environment:
-      APISERVER_HOST: apiserver:8080
+      TUNNEL_HOST: tunnelserver:8080
+  tunnelserver:
+    #container_name: gprs-server
+    image: ghcr.io/slntopp/nocloud-tunnel-mesh/apiserver-web:latest
     ports:
-      - 10000:10000 # REST-API
-    networks:
-      - grpc-internal
-
-networks:
-  grpc-internal:
-  arangodb:
-    driver: bridge
-
-volumes:
-  data:
+      - 8080:8080

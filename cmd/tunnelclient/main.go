@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/logger"
@@ -20,26 +19,24 @@ func init() {
 	lg = logger.NewLogger()
 
 	viper.AutomaticEnv()
-	viper.SetDefault("PORT", "8080")
-	viper.SetDefault("HOST", "localhost")
+	viper.SetDefault("TUNNEL_HOST", "localhost:8080")
 }
 
 func main() {
 
-	host := viper.GetString("HOST")
-	port := viper.GetString("PORT")
+	host := viper.GetString("TUNNEL_HOST")
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 	opts = append(opts, grpc.WithBlock())
 
-	conn, err := grpc.Dial(host+":"+port, opts...)
+	conn, err := grpc.Dial(host, opts...)
 	if err != nil {
 		lg.Fatal("fail to dial:", zap.Error(err))
 	}
 	defer conn.Close()
 
-	lg.Info("Connected server", zap.String("host", host), zap.String("port", port), zap.Skip())
+	lg.Info("Connected server", zap.String("host", host), zap.Skip())
 
 	client := pb.NewTunnelClient(conn)
 
@@ -68,7 +65,7 @@ func main() {
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
-			lg.Info(fmt.Sprintf("Connection closed %s:%s", host, port), zap.Skip())
+			lg.Info("Connection closed", zap.String("TUNNEL_HOST", host), zap.Skip())
 			return
 		}
 		if err != nil {
