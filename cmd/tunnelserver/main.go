@@ -3,10 +3,8 @@ package main
 import (
 	"bufio"
 	"context"
-	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 
@@ -14,12 +12,22 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/slntopp/nocloud-tunnel-mesh/pkg/logger"
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 var (
-	port = flag.Int("port", 10000, "The server port")
+	lg *zap.Logger
 )
+
+func init() {
+	lg = logger.NewLogger()
+
+	viper.AutomaticEnv()
+	viper.SetDefault("PORT", "8080")
+}
 
 type tunnelServer struct {
 	pb.UnimplementedTunnelServer
@@ -61,14 +69,10 @@ func (*tunnelServer) InitTunnel(stream pb.Tunnel_InitTunnelServer) error {
 		stdreader := bufio.NewReader(os.Stdin)
 
 		for {
-			myFPass, _ := stdreader.ReadString('\n')
-			notes := []*pb.StreamData{
-				{Message: myFPass},
-			}
-			for _, note := range notes {
-				if err := stream.Send(note); err != nil {
-					log.Fatalf("Failed to send a note: %v", err)
-				}
+			note, _ := stdreader.ReadString('\n')
+
+			if err := stream.Send(&pb.StreamData{Message: note}); err != nil {
+				lg.Fatal("Failed to send a note:", zap.Error(err))
 			}
 
 		}
@@ -83,7 +87,7 @@ func (*tunnelServer) InitTunnel(stream pb.Tunnel_InitTunnelServer) error {
 			return err
 		}
 
-		log.Printf("Hello from client to server! %s", in.Host)
+		lg.Info("Hello from client to server!", zap.String("note", in.Host), zap.Skip())
 		fmt.Print("m2c > ")
 	}
 
@@ -95,15 +99,15 @@ func (*tunnelServer) InitTunnel(stream pb.Tunnel_InitTunnelServer) error {
 // }
 
 func main() {
-	flag.Parse()
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
+	port := viper.GetString("PORT")
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		lg.Fatal("failed to listen:", zap.Error(err))
 	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 	// pb.RegisterTunnelServer(grpcServer, newServer())
 	pb.RegisterTunnelServer(grpcServer, &tunnelServer{})
-	fmt.Printf("gRPC-Server Listening on localhost:%d\n", *port)
+	lg.Info("gRPC-Server Listening on localhost:", zap.String("port", port), zap.Skip())
 	grpcServer.Serve(lis)
 }
