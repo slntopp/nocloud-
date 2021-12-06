@@ -28,7 +28,7 @@ type routeGuideServer struct {
 
 // RouteChat receives a stream of message/location pairs, and responds with a stream of all
 // previous messages at each of those locations.
-func (s *routeGuideServer) RouteChat(stream pb.RouteGuide_RouteChatServer) error {
+func (*routeGuideServer) RouteChat(stream pb.RouteGuide_RouteChatServer) error {
 
 	go func() {
 		stdreader := bufio.NewReader(os.Stdin)

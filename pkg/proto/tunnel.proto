@@ -21,6 +21,6 @@ message SendDataResponse {
 }
 
 service Tunnel {
-    rpc InitTunnel(InitTunnelRequest) returns (stream StreamData);
+    rpc InitTunnel(stream InitTunnelRequest) returns (stream StreamData) {};
     rpc SendData(SendDataRequest) returns (SendDataResponse);
 }
