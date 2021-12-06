@@ -7,15 +7,15 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/tunnelclient
-RUN upx ./tunnelclient
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/tunnelserver
+RUN upx ./tunnelserver
 
 FROM scratch
 WORKDIR /
-COPY --from=builder  /go/src/github.com/slntopp/nocloud-tunnel-mesh/tunnelclient /tunnelclient
+COPY --from=builder  /go/src/github.com/slntopp/nocloud-tunnel-mesh/tunnelserver /tunnelserver
 
 EXPOSE 8080
 EXPOSE 8000
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud-tunnel-mesh
 
-ENTRYPOINT ["/tunnelclient"]
+ENTRYPOINT ["/tunnelserver"]
