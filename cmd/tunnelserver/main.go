@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"fmt"
 	"io"
 	"net"
-	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -33,24 +30,62 @@ type tunnelServer struct {
 	pb.UnimplementedTunnelServer
 
 	conns map[string]pb.Tunnel_InitTunnelServer
+
+	c chan error
 }
 
 func (s *tunnelServer) SendData(ctx context.Context, req *pb.SendDataRequest) (*pb.SendDataResponse, error) {
+
 	stream, ok := s.conns[req.GetHost()]
 	if !ok {
 		return nil, status.Error(codes.NotFound, "Connection not found")
 	}
-	err := stream.SendMsg(req.GetMessage())
+	err := stream.Send(&pb.StreamData{Message: req.GetMessage()})
 	if err != nil {
+		s.c <- err
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &pb.SendDataResponse{Result: true}, nil
+	in, _ := s.conns["0"].Recv()
+	if err == io.EOF {
+		s.c <- nil
+		return nil, status.Error(codes.NotFound, "Connection lost")
+	}
+	if err != nil {
+		s.c <- err
+		return nil, err
+	}
+
+	return &pb.SendDataResponse{Result: "true\n" == in.Host}, nil
+
+	// return &pb.SendDataResponse{Result: true}, nil
+
+	// ms := req.GetMessage()
+	// log.Printf("Greetings s: %v", ms)
+	// if "true\n" == ms {
+
+	// 	return &pb.SendDataResponse{Result: true}, nil
+	// } else {
+	// 	return &pb.SendDataResponse{Result: false}, nil
+
+	// }
+
+	// s.conns["0"].Send(&pb.StreamData{Message: req.GetMessage()})
+	// in, _ := s.conns["0"].Recv()
+	// // if err == io.EOF {
+	// // 	return nil
+	// // }
+	// // if err != nil {
+	// // 	return err
+	// // }
+
+	// return &pb.SendDataResponse{Result: "true\n" == in.Host}, nil
+
 }
 
 // func (s *tunnelServer) InitTunnel(req *pb.InitTunnelRequest, stream pb.Tunnel_InitTunnelServer) error {
-func (*tunnelServer) InitTunnel(stream pb.Tunnel_InitTunnelServer) error {
-	fmt.Println("Got streaming connection request")
+func (s *tunnelServer) InitTunnel(stream pb.Tunnel_InitTunnelServer) error {
+
 	// s.conns[req.GetHost()] = stream
 	// for {
 	// 	err := stream.RecvMsg(nil)
@@ -65,38 +100,41 @@ func (*tunnelServer) InitTunnel(stream pb.Tunnel_InitTunnelServer) error {
 	// 	}
 	// }
 
-	go func() {
-		stdreader := bufio.NewReader(os.Stdin)
+	// fmt.Println("Got streaming connection request")
+	// go func() {
+	// 	stdreader := bufio.NewReader(os.Stdin)
 
-		for {
-			note, _ := stdreader.ReadString('\n')
+	// 	for {
+	// 		note, _ := stdreader.ReadString('\n')
 
-			if err := stream.Send(&pb.StreamData{Message: note}); err != nil {
-				lg.Fatal("Failed to send a note:", zap.Error(err))
-			}
+	// 		if err := stream.Send(&pb.StreamData{Message: note}); err != nil {
+	// 			lg.Fatal("Failed to send a note:", zap.Error(err))
+	// 		}
+	// 		log.Printf("Greetings s: %v", s.conns)
 
-		}
-	}()
+	// 	}
+	// }()
 
-	for {
-		in, err := stream.Recv()
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-
-		lg.Info("Hello from client to server!", zap.String("note", in.Host), zap.Skip())
-		fmt.Print("m2c > ")
+	in, err := stream.Recv()
+	if err == io.EOF {
+		return nil
+	}
+	if err != nil {
+		return err
 	}
 
+	s.conns["0"] = stream
+	s.c = make(chan error)
+
+	lg.Info("Hello from client to server!", zap.String("note", in.Host), zap.Skip())
+
+	return <-s.c
 }
 
-// func newServer() *tunnelServer {
-// 	s := &tunnelServer{conns: make(map[string]pb.Tunnel_InitTunnelServer)}
-// 	return s
-// }
+func newServer() *tunnelServer {
+	s := &tunnelServer{conns: make(map[string]pb.Tunnel_InitTunnelServer)}
+	return s
+}
 
 func main() {
 	port := viper.GetString("PORT")
@@ -106,8 +144,10 @@ func main() {
 	}
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
-	// pb.RegisterTunnelServer(grpcServer, newServer())
-	pb.RegisterTunnelServer(grpcServer, &tunnelServer{})
+	pb.RegisterTunnelServer(grpcServer, newServer())
+	// pb.RegisterTunnelServer(grpcServer, &tunnelServer{})
 	lg.Info("gRPC-Server Listening on localhost:", zap.String("port", port), zap.Skip())
-	grpcServer.Serve(lis)
+	if err := grpcServer.Serve(lis); err != nil {
+		lg.Fatal("failed to serve:", zap.Error(err))
+	}
 }
