@@ -2,12 +2,12 @@ version: "3.8"
 services:
   tunnelclient:
     #container_name: tunnelclient
-    image: ghcr.io/slntopp/nocloud-tunnel-mesh/tunnelclient:latest
+    image: ghcr.io/slntopp/nocloud-tunnel-mesh/client:latest
     environment:
       TUNNEL_HOST: tunnelserver:8080
       SECURE: false
   tunnelserver:
     #container_name: gprs-server
-    image: ghcr.io/slntopp/nocloud-tunnel-mesh/tunnelserver:latest
+    image: ghcr.io/slntopp/nocloud-tunnel-mesh/server:latest
     ports:
       - 18080:8080
