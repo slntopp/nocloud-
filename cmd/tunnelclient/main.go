@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
 
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/logger"
@@ -9,10 +10,13 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
 	lg *zap.Logger
+	host string
+	secure bool
 )
 
 func init() {
@@ -20,14 +24,22 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetDefault("TUNNEL_HOST", "localhost:8080")
+	viper.SetDefault("SECURE", false)
+	
+	host = viper.GetString("TUNNEL_HOST")
+	secure = viper.GetBool("SECURE")
 }
 
 func main() {
 
-	host := viper.GetString("TUNNEL_HOST")
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
+	if secure {
+		cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+		opts[0] = grpc.WithTransportCredentials(cred)
+	}
+
 	opts = append(opts, grpc.WithBlock())
 
 	conn, err := grpc.Dial(host, opts...)

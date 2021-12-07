@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +11,7 @@ import (
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // var (
@@ -21,14 +23,20 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetDefault("TUNNEL_HOST", "localhost:18080")
+	viper.SetDefault("SECURE", false)
 }
 
 func main() {
 
 	host := viper.GetString("TUNNEL_HOST")
+	secure := viper.GetBool("SECURE")
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
+	if secure {
+		cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+		opts[0] = grpc.WithTransportCredentials(cred)
+	}
 	opts = append(opts, grpc.WithBlock())
 
 	conn, err := grpc.Dial(host, opts...)

@@ -5,6 +5,7 @@ services:
     image: ghcr.io/slntopp/nocloud-tunnel-mesh/tunnelclient:latest
     environment:
       TUNNEL_HOST: tunnelserver:8080
+      SECURE: false
   tunnelserver:
     #container_name: gprs-server
     image: ghcr.io/slntopp/nocloud-tunnel-mesh/tunnelserver:latest
