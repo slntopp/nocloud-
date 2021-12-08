@@ -17,7 +17,7 @@ import (
 func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("TUNNEL_HOST", "localhost:8080")
-	viper.SetDefault("SECURE", false)
+	viper.SetDefault("SECURE", true)
 }
 
 func main() {
@@ -26,10 +26,42 @@ func main() {
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
+	// if viper.GetBool("SECURE") {
+	// 	cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+	// 	opts[0] = grpc.WithTransportCredentials(cred)
+	// }
+
 	if viper.GetBool("SECURE") {
-		cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+		// Load client cert
+		cert, err := tls.LoadX509KeyPair("cert/client.crt", "cert/client.key")
+		if err != nil {
+			log.Fatal("fail to LoadX509KeyPair:", err)
+		}
+
+		// // Load CA cert
+		// //Certification authority, CA
+		// //A CA certificate is a digital certificate issued by a certificate authority (CA), so SSL clients (such as web browsers) can use it to verify the SSL certificates sign by this CA.
+		// caCert, err := ioutil.ReadFile("../cert/cacerts.cer")
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
+		// caCertPool := x509.NewCertPool()
+		// caCertPool.AppendCertsFromPEM(caCert)
+
+		// Setup HTTPS client
+		config := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			// RootCAs:            caCertPool,
+			// InsecureSkipVerify: false,
+			InsecureSkipVerify: true,
+		}
+		// config.BuildNameToCertificate()
+		cred := credentials.NewTLS(config)
+
+		// cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
 		opts[0] = grpc.WithTransportCredentials(cred)
 	}
+
 	opts = append(opts, grpc.WithBlock())
 
 	conn, err := grpc.Dial(host, opts...)

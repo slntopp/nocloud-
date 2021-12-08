@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
-	"log"
 	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/logger"
@@ -27,7 +28,7 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetDefault("PORT", "8080")
-	viper.SetDefault("SECURE", false)
+	viper.SetDefault("SECURE", true)
 }
 
 type tunnelServerParams struct {
@@ -43,7 +44,7 @@ type tunnelServer struct {
 
 func (s *tunnelServer) SendData(ctx context.Context, req *pb.SendDataRequest) (*pb.SendDataResponse, error) {
 
-	log.Println(s.tsps)
+	// fmt.Println(s.tsps)
 	tsp, ok := s.tsps[req.GetHost()]
 	if !ok {
 		lg.Error("Connection not found", zap.String("GetHost", req.GetHost()), zap.String("f", "SendData"))
@@ -97,6 +98,41 @@ func newServer() *tunnelServer {
 	return s
 }
 
+// wrappedStream wraps around the embedded grpc.ServerStream, and intercepts the RecvMsg and
+// SendMsg method call.
+type wrappedStream struct {
+	grpc.ServerStream
+}
+
+func newWrappedStream(s grpc.ServerStream) grpc.ServerStream {
+
+	fmt.Println("s:", s)
+	return &wrappedStream{s}
+}
+
+func streamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	// authentication (token verification)
+	md, _ := metadata.FromIncomingContext(ss.Context())
+
+	// 	md: map[:authority:[localhost:8080] content-type:[application/grpc] user-agent:[grpc-go/1.42.0]]
+	// info: &{/tunnel.Tunnel/InitTunnel true true}
+	fmt.Println("md:", md)
+	fmt.Println("info:", info)
+	// if !ok {
+	// 	return errMissingMetadata
+	// }
+	// if !valid(md["authorization"]) {
+	// 	return errInvalidToken
+	// }
+
+	handler(srv, newWrappedStream(ss))
+	// err := handler(srv, newWrappedStream(ss))
+	// if err != nil {
+	// 	logger("RPC failed with error %v", err)
+	// }
+	return nil
+}
+
 func main() {
 	port := viper.GetString("PORT")
 	lis, err := net.Listen("tcp", ":"+port)
@@ -107,14 +143,15 @@ func main() {
 	var opts []grpc.ServerOption
 
 	if viper.GetBool("SECURE") {
-		// cert, err := tls.LoadX509KeyPair("certs/server.pem", "certs/server.key")
-		// if err != nil {
-		// 	lg.Fatal("server: loadkeys:", zap.Error(err))
-		// }
+		//openssl req -new -newkey rsa:4096 -x509 -sha256 -days 30 -nodes -out server.crt -keyout server.key
+		cert, err := tls.LoadX509KeyPair("cert/server.crt", "cert/server.key")
+		if err != nil {
+			lg.Fatal("server: loadkeys:", zap.Error(err))
+		}
 		// Note if we don't tls.RequireAnyClientCert client side certs are ignored.
 		config := &tls.Config{
-			// Certificates: []tls.Certificate{cert},
-			ClientAuth:   tls.RequireAnyClientCert,
+			Certificates: []tls.Certificate{cert},
+			ClientAuth: tls.RequireAnyClientCert,
 			// ClientAuth:   tls.RequireAndVerifyClientCert,
 			// InsecureSkipVerify: false,
 			InsecureSkipVerify: true,
@@ -129,7 +166,10 @@ func main() {
 		// https://stackoverflow.com/questions/43829022/failed-to-complete-security-handshake-on-grpc
 	}
 
+	// opts = append(opts, grpc.StreamInterceptor(streamInterceptor))
+
 	grpcServer := grpc.NewServer(opts...)
+	//r.TLS.PeerCertificates[0].Subject.CommonName
 
 	pb.RegisterTunnelServer(grpcServer, newServer())
 	// pb.RegisterTunnelServer(grpcServer, &tunnelServer{})

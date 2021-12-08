@@ -14,6 +14,8 @@ FROM scratch
 WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud-tunnel-mesh/tunnelclient /tunnelclient
 
+COPY cert cert
+
 EXPOSE 8080
 EXPOSE 8000
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud-tunnel-mesh
