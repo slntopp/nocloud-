@@ -106,6 +106,8 @@ type wrappedStream struct {
 
 func newWrappedStream(s grpc.ServerStream) grpc.ServerStream {
 
+	// https://stackoverflow.com/questions/27006725/check-fingerprints-of-server-ssl-tls-certificates-in-http-newrequest
+
 	fmt.Println("s:", s)
 	return &wrappedStream{s}
 }

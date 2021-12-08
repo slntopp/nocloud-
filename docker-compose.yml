@@ -6,8 +6,12 @@ services:
     environment:
       TUNNEL_HOST: tunnelserver:8080
       #SECURE: "true"
+    volumes:
+      - ./cert:/cert
   tunnelserver:
     #container_name: gprs-server
     image: ghcr.io/slntopp/nocloud-tunnel-mesh/server:latest
     ports:
       - 8080:8080
+    volumes:
+      - ./cert:/cert
