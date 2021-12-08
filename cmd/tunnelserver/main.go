@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
+	"log"
 	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/logger"
@@ -24,6 +27,7 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetDefault("PORT", "8080")
+	viper.SetDefault("SECURE", false)
 }
 
 type tunnelServer struct {
@@ -142,8 +146,29 @@ func main() {
 	if err != nil {
 		lg.Fatal("failed to listen:", zap.Error(err))
 	}
+
 	var opts []grpc.ServerOption
+
+	if viper.GetBool("SECURE") {
+		cert, err := tls.LoadX509KeyPair("certs/server.pem", "certs/server.key")
+		if err != nil {
+			log.Fatalf("server: loadkeys: %s", err)
+		}
+		// Note if we don't tls.RequireAnyClientCert client side certs are ignored.
+		config := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			ClientAuth:   tls.RequireAnyClientCert,
+			// ClientAuth:   tls.RequireAndVerifyClientCert,
+			InsecureSkipVerify: false,
+		}
+		cred := credentials.NewTLS(config)
+
+		// cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+		opts = append(opts, grpc.WithTransportCredentials(cred))
+	}
+
 	grpcServer := grpc.NewServer(opts...)
+
 	pb.RegisterTunnelServer(grpcServer, newServer())
 	// pb.RegisterTunnelServer(grpcServer, &tunnelServer{})
 	lg.Info("gRPC-Server Listening on localhost:", zap.String("port", port), zap.Skip())
