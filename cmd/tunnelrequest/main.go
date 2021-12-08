@@ -14,26 +14,19 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// var (
-// 	lg *zap.Logger
-// )
-
 func init() {
-	// lg = logger.NewLogger()
-
 	viper.AutomaticEnv()
-	viper.SetDefault("TUNNEL_HOST", "localhost:18080")
+	viper.SetDefault("TUNNEL_HOST", "localhost:8080")
 	viper.SetDefault("SECURE", false)
 }
 
 func main() {
 
 	host := viper.GetString("TUNNEL_HOST")
-	secure := viper.GetBool("SECURE")
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
-	if secure {
+	if viper.GetBool("SECURE") {
 		cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
 		opts[0] = grpc.WithTransportCredentials(cred)
 	}
@@ -58,9 +51,9 @@ func main() {
 		// if err := stream.Send(&pb.StreamData{Message: note}); err != nil {
 		// 	lg.Fatal("Failed to send a note:", zap.Error(err))
 
-		r, err := client.SendData(context.Background(), &pb.SendDataRequest{Host: "0", Message: note})
+		r, err := client.SendData(context.Background(), &pb.SendDataRequest{Host: "ClientZero", Message: note})
 		if err != nil {
-			log.Fatalf("could not greet: %v", err)
+			log.Printf("could not SendData: %v", err)
 		}
 		log.Printf("Greeting c: %v", r.GetResult())
 

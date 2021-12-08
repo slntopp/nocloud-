@@ -30,113 +30,70 @@ func init() {
 	viper.SetDefault("SECURE", false)
 }
 
+type tunnelServerParams struct {
+	stream pb.Tunnel_InitTunnelServer
+	ch     chan error
+}
+
 type tunnelServer struct {
 	pb.UnimplementedTunnelServer
 
-	conns map[string]pb.Tunnel_InitTunnelServer
-
-	c chan error
+	tsps map[string]tunnelServerParams
 }
 
 func (s *tunnelServer) SendData(ctx context.Context, req *pb.SendDataRequest) (*pb.SendDataResponse, error) {
 
-	stream, ok := s.conns[req.GetHost()]
+	log.Println(s.tsps)
+	tsp, ok := s.tsps[req.GetHost()]
 	if !ok {
+		lg.Error("Connection not found", zap.String("GetHost", req.GetHost()), zap.String("f", "SendData"))
 		return nil, status.Error(codes.NotFound, "Connection not found")
 	}
-	err := stream.Send(&pb.StreamData{Message: req.GetMessage()})
+	err := tsp.stream.Send(&pb.StreamData{Message: req.GetMessage()})
 	if err != nil {
-		s.c <- err
+		lg.Error("Failed to send a note:", zap.String("GetHost", req.GetHost()), zap.String("f", "SendData"))
+		tsp.ch <- err
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	in, _ := s.conns["0"].Recv()
+	in, _ := tsp.stream.Recv()
 	if err == io.EOF {
-		s.c <- nil
+		lg.Error("Connection lost", zap.String("GetHost", req.GetHost()), zap.String("f", "SendData"))
+		tsp.ch <- nil
 		return nil, status.Error(codes.NotFound, "Connection lost")
 	}
 	if err != nil {
-		s.c <- err
+		lg.Error("stream.Recv()", zap.String("GetHost", req.GetHost()), zap.String("f", "SendData"))
+		tsp.ch <- err
 		return nil, err
 	}
 
 	return &pb.SendDataResponse{Result: "true\n" == in.Host}, nil
 
-	// return &pb.SendDataResponse{Result: true}, nil
-
-	// ms := req.GetMessage()
-	// log.Printf("Greetings s: %v", ms)
-	// if "true\n" == ms {
-
-	// 	return &pb.SendDataResponse{Result: true}, nil
-	// } else {
-	// 	return &pb.SendDataResponse{Result: false}, nil
-
-	// }
-
-	// s.conns["0"].Send(&pb.StreamData{Message: req.GetMessage()})
-	// in, _ := s.conns["0"].Recv()
-	// // if err == io.EOF {
-	// // 	return nil
-	// // }
-	// // if err != nil {
-	// // 	return err
-	// // }
-
-	// return &pb.SendDataResponse{Result: "true\n" == in.Host}, nil
-
 }
 
-// func (s *tunnelServer) InitTunnel(req *pb.InitTunnelRequest, stream pb.Tunnel_InitTunnelServer) error {
 func (s *tunnelServer) InitTunnel(stream pb.Tunnel_InitTunnelServer) error {
-
-	// s.conns[req.GetHost()] = stream
-	// for {
-	// 	err := stream.RecvMsg(nil)
-	// 	fmt.Printf("Possible Error receiving from Stream: %w\n", err)
-	// 	if err == io.EOF {
-	// 		delete(s.conns, req.GetHost())
-	// 		return nil
-	// 	}
-	// 	if err != nil {
-	// 		delete(s.conns, req.GetHost())
-	// 		return err
-	// 	}
-	// }
-
-	// fmt.Println("Got streaming connection request")
-	// go func() {
-	// 	stdreader := bufio.NewReader(os.Stdin)
-
-	// 	for {
-	// 		note, _ := stdreader.ReadString('\n')
-
-	// 		if err := stream.Send(&pb.StreamData{Message: note}); err != nil {
-	// 			lg.Fatal("Failed to send a note:", zap.Error(err))
-	// 		}
-	// 		log.Printf("Greetings s: %v", s.conns)
-
-	// 	}
-	// }()
 
 	in, err := stream.Recv()
 	if err == io.EOF {
+		lg.Error("lost conn InitTunnel:", zap.Error(err), zap.String("f", "InitTunnel"))
 		return nil
 	}
 	if err != nil {
+		lg.Error("InitTunnel:", zap.Error(err), zap.String("f", "InitTunnel"))
 		return err
 	}
 
-	s.conns["0"] = stream
-	s.c = make(chan error)
-
 	lg.Info("Hello from client to server!", zap.String("note", in.Host), zap.Skip())
 
-	return <-s.c
+	s.tsps[in.Host] = tunnelServerParams{stream, make(chan error)}
+	defer delete(s.tsps, in.Host)
+
+	return <-s.tsps[in.Host].ch
 }
 
 func newServer() *tunnelServer {
-	s := &tunnelServer{conns: make(map[string]pb.Tunnel_InitTunnelServer)}
+	s := &tunnelServer{tsps: make(map[string]tunnelServerParams)}
 	return s
 }
 
@@ -150,21 +107,26 @@ func main() {
 	var opts []grpc.ServerOption
 
 	if viper.GetBool("SECURE") {
-		cert, err := tls.LoadX509KeyPair("certs/server.pem", "certs/server.key")
-		if err != nil {
-			log.Fatalf("server: loadkeys: %s", err)
-		}
+		// cert, err := tls.LoadX509KeyPair("certs/server.pem", "certs/server.key")
+		// if err != nil {
+		// 	lg.Fatal("server: loadkeys:", zap.Error(err))
+		// }
 		// Note if we don't tls.RequireAnyClientCert client side certs are ignored.
 		config := &tls.Config{
-			Certificates: []tls.Certificate{cert},
+			// Certificates: []tls.Certificate{cert},
 			ClientAuth:   tls.RequireAnyClientCert,
 			// ClientAuth:   tls.RequireAndVerifyClientCert,
-			InsecureSkipVerify: false,
+			// InsecureSkipVerify: false,
+			InsecureSkipVerify: true,
 		}
 		cred := credentials.NewTLS(config)
 
 		// cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
-		opts = append(opts, grpc.WithTransportCredentials(cred))
+		opts = append(opts, grpc.Creds(cred))
+		// // Enable TLS for all incoming connections.
+		// opts = append(opts, grpc.Creds(credentials.NewServerTLSFromCert(&cert)))
+		// failed to complete security handshake on grpc?
+		// https://stackoverflow.com/questions/43829022/failed-to-complete-security-handshake-on-grpc
 	}
 
 	grpcServer := grpc.NewServer(opts...)

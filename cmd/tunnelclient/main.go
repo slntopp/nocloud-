@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"time"
 
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/logger"
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
@@ -35,8 +36,6 @@ func main() {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 	if secure {
-		// cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
-
 		// Load client cert
 		cert, err := tls.LoadX509KeyPair("../cert/certNEW.pem", "../cert/serverNEW.key")
 		if err != nil {
@@ -57,11 +56,13 @@ func main() {
 		config := &tls.Config{
 			Certificates: []tls.Certificate{cert},
 			// RootCAs:            caCertPool,
-			InsecureSkipVerify: false,
+			// InsecureSkipVerify: false,
+			InsecureSkipVerify: true,
 		}
-		config.BuildNameToCertificate()
+		// config.BuildNameToCertificate()
 		cred := credentials.NewTLS(config)
 
+		// cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
 		opts[0] = grpc.WithTransportCredentials(cred)
 	}
 
@@ -69,6 +70,7 @@ func main() {
 
 	//Reconnection
 	for {
+		defer time.Sleep(5 * time.Second)
 
 		conn, err := grpc.Dial(host, opts...)
 		if err != nil {
@@ -87,7 +89,7 @@ func main() {
 			continue
 		}
 
-		if err := stream.Send(&pb.InitTunnelRequest{Host: "Hello, server!"}); err != nil {
+		if err := stream.Send(&pb.InitTunnelRequest{Host: "ClientZero"}); err != nil {//todo Clientname?
 			lg.Error("Failed to send Hello:", zap.Error(err))
 			continue
 		}
