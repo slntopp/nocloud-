@@ -3,14 +3,17 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/logger"
@@ -44,6 +47,24 @@ type tunnelServer struct {
 
 func (s *tunnelServer) SendData(ctx context.Context, req *pb.SendDataRequest) (*pb.SendDataResponse, error) {
 
+	// peer, ok := peer.FromContext(ctx)
+	// if ok {
+
+	// 	tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
+	// 	// fmt.Println(tlsInfo)
+	// 	// v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
+	// 	// fmt.Printf("%v - %v\n", peer.Addr.String(), v)
+	// 	//r.TLS.PeerCertificates[0].Subject.CommonName
+	// 	for _, v := range tlsInfo.State.PeerCertificates {
+	// 		//    fmt.Println("Client: Server public key is:")
+	// 		//    fmt.Println(x509.MarshalPKIXPublicKey(v.PublicKey))
+
+	// 		fmt.Println("Public CommonName is:", v.Subject.CommonName) /*  */
+	// 		   fmt.Println("Public Signature is:",v.Signature) //fingerprint?
+	// 	}
+	// }
+	// return &pb.SendDataResponse{Result: "true\n" == req.GetMessage()}, nil
+
 	// fmt.Println(s.tsps)
 	tsp, ok := s.tsps[req.GetHost()]
 	if !ok {
@@ -74,6 +95,27 @@ func (s *tunnelServer) SendData(ctx context.Context, req *pb.SendDataRequest) (*
 }
 
 func (s *tunnelServer) InitTunnel(stream pb.Tunnel_InitTunnelServer) error {
+
+
+
+	peer, ok := peer.FromContext(stream.Context())
+	if ok {
+		tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
+		fmt.Println("tlsInfo", tlsInfo.State)
+		// fmt.Println("tlsInfo", tlsInfo.State)
+		// v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
+		// fmt.Printf("%v - %v\n", peer.Addr.String(), v)
+		//r.TLS.PeerCertificates[0].Subject.CommonName
+		for _, v := range tlsInfo.State.PeerCertificates {
+			//    fmt.Println("Client: Server public key is:")
+			//    fmt.Println(x509.MarshalPKIXPublicKey(v.PublicKey))
+
+			v1 := v.Subject.CommonName
+			fmt.Println("Public CommonName Interceptor is:", v1)
+		}
+	} else {
+		fmt.Println("peer.FromContext: ", ok)
+	}
 
 	in, err := stream.Recv()
 	if err == io.EOF {
@@ -106,26 +148,45 @@ type wrappedStream struct {
 
 func newWrappedStream(s grpc.ServerStream) grpc.ServerStream {
 
-	// https://stackoverflow.com/questions/27006725/check-fingerprints-of-server-ssl-tls-certificates-in-http-newrequest
-
-	fmt.Println("s:", s)
+	// fmt.Println("s:", s)
 	return &wrappedStream{s}
 }
 
 func streamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	// authentication (token verification)
-	md, _ := metadata.FromIncomingContext(ss.Context())
 
-	// 	md: map[:authority:[localhost:8080] content-type:[application/grpc] user-agent:[grpc-go/1.42.0]]
-	// info: &{/tunnel.Tunnel/InitTunnel true true}
-	fmt.Println("md:", md)
-	fmt.Println("info:", info)
-	// if !ok {
-	// 	return errMissingMetadata
-	// }
-	// if !valid(md["authorization"]) {
-	// 	return errInvalidToken
-	// }
+	peer, ok := peer.FromContext(ss.Context())
+	if ok {
+		tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
+		fmt.Println("tlsInfo", tlsInfo.State)
+		fmt.Println("info", info)
+		// fmt.Println("tlsInfo", tlsInfo.State)
+		// v := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
+		// fmt.Printf("%v - %v\n", peer.Addr.String(), v)
+		//r.TLS.PeerCertificates[0].Subject.CommonName
+		for _, v := range tlsInfo.State.PeerCertificates {
+			//    fmt.Println("Client: Server public key is:")
+			//    fmt.Println(x509.MarshalPKIXPublicKey(v.PublicKey))
+
+			v1 := v.Subject.CommonName
+			fmt.Println("Public CommonName Interceptor is:", v1)
+		}
+	} else {
+		fmt.Println("peer.FromContext: ", ok)
+	}
+
+
+	// // authentication (token verification)
+	// 	md, _ := metadata.FromIncomingContext(ss.Context())
+	// // 	md: map[:authority:[localhost:8080] content-type:[application/grpc] user-agent:[grpc-go/1.42.0]]
+	// // info: &{/tunnel.Tunnel/InitTunnel true true}
+	// fmt.Println("md:", md)
+	// fmt.Println("info:", info)
+	// // if !ok {
+	// // 	return errMissingMetadata
+	// // }
+	// // if !valid(md["authorization"]) {
+	// // 	return errInvalidToken
+	// // }
 
 	handler(srv, newWrappedStream(ss))
 	// err := handler(srv, newWrappedStream(ss))
@@ -150,13 +211,34 @@ func main() {
 		if err != nil {
 			lg.Fatal("server: loadkeys:", zap.Error(err))
 		}
+
+		// Load CA cert
+		caCertPool := x509.NewCertPool()
+		//Certification authority, CA
+		//A CA certificate is a digital certificate issued by a certificate authority (CA), so SSL clients (such as web browsers) can use it to verify the SSL certificates sign by this CA.
+		//todo собрать клиентские сертификаты в один файл
+		caCert, err := ioutil.ReadFile("cert/0client.crt")
+		if err != nil {
+			log.Fatal(err)
+		}
+		caCertPool.AppendCertsFromPEM(caCert)
+		caCert, err = ioutil.ReadFile("cert/1client.crt")
+		if err != nil {
+			log.Fatal(err)
+		}
+		caCertPool.AppendCertsFromPEM(caCert)
+
 		// Note if we don't tls.RequireAnyClientCert client side certs are ignored.
 		config := &tls.Config{
 			Certificates: []tls.Certificate{cert},
-			ClientAuth: tls.RequireAnyClientCert,
-			// ClientAuth:   tls.RequireAndVerifyClientCert,
-			// InsecureSkipVerify: false,
-			InsecureSkipVerify: true,
+			// ClientCAs:    caCertPool,//It work! Peer client sertificates autenification
+			ClientAuth:   tls.RequireAnyClientCert,
+			//ClientAuth: tls.RequireAndVerifyClientCert,
+			RootCAs: caCertPool,
+			// VerifyPeerCertificate: customVerify,
+			// VerifyPeerCertificate: is called only after normal certificate verification https://pkg.go.dev/crypto/tls#Config
+			InsecureSkipVerify: false,
+			//InsecureSkipVerify: true,
 		}
 		cred := credentials.NewTLS(config)
 
@@ -171,7 +253,6 @@ func main() {
 	// opts = append(opts, grpc.StreamInterceptor(streamInterceptor))
 
 	grpcServer := grpc.NewServer(opts...)
-	//r.TLS.PeerCertificates[0].Subject.CommonName
 
 	pb.RegisterTunnelServer(grpcServer, newServer())
 	// pb.RegisterTunnelServer(grpcServer, &tunnelServer{})

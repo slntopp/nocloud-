@@ -25,7 +25,7 @@ func main() {
 	host := viper.GetString("TUNNEL_HOST")
 
 	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
+	// opts = append(opts, grpc.WithInsecure())
 	// if viper.GetBool("SECURE") {
 	// 	cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
 	// 	opts[0] = grpc.WithTransportCredentials(cred)
@@ -33,7 +33,8 @@ func main() {
 
 	if viper.GetBool("SECURE") {
 		// Load client cert
-		cert, err := tls.LoadX509KeyPair("cert/client.crt", "cert/client.key")
+		 //cert, err := tls.LoadX509KeyPair("cert/0client.crt", "cert/0client.key")
+		cert, err := tls.LoadX509KeyPair("cert/1client.crt", "cert/1client.key")
 		if err != nil {
 			log.Fatal("fail to LoadX509KeyPair:", err)
 		}
@@ -59,7 +60,10 @@ func main() {
 		cred := credentials.NewTLS(config)
 
 		// cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
-		opts[0] = grpc.WithTransportCredentials(cred)
+		// opts[0] = grpc.WithTransportCredentials(cred)
+		opts = append(opts, grpc.WithTransportCredentials(cred))
+	} else {
+	opts = append(opts, grpc.WithInsecure())
 	}
 
 	opts = append(opts, grpc.WithBlock())
