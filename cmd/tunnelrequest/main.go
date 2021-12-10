@@ -5,8 +5,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net"
+	"net/http"
 	"os"
+	"time"
 
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
 	"github.com/spf13/viper"
@@ -20,7 +24,7 @@ func init() {
 	viper.SetDefault("SECURE", true)
 }
 
-func main() {
+func grpcClient() {
 
 	host := viper.GetString("TUNNEL_HOST")
 
@@ -33,7 +37,7 @@ func main() {
 
 	if viper.GetBool("SECURE") {
 		// Load client cert
-		 //cert, err := tls.LoadX509KeyPair("cert/0client.crt", "cert/0client.key")
+		//cert, err := tls.LoadX509KeyPair("cert/0client.crt", "cert/0client.key")
 		cert, err := tls.LoadX509KeyPair("cert/1client.crt", "cert/1client.key")
 		if err != nil {
 			log.Fatal("fail to LoadX509KeyPair:", err)
@@ -63,7 +67,7 @@ func main() {
 		// opts[0] = grpc.WithTransportCredentials(cred)
 		opts = append(opts, grpc.WithTransportCredentials(cred))
 	} else {
-	opts = append(opts, grpc.WithInsecure())
+		opts = append(opts, grpc.WithInsecure())
 	}
 
 	opts = append(opts, grpc.WithBlock())
@@ -95,4 +99,82 @@ func main() {
 
 	}
 
+}
+func restClient() {
+
+	stdreader := bufio.NewScanner(os.Stdin)
+	fmt.Print("c2s > ")
+	for stdreader.Scan() {
+
+		// // localAddr, err := net.ResolveIPAddr("ip", "localhost")
+		// localAddr, err := net.ResolveIPAddr("ip", "127.0.0.1")
+		// if err != nil {
+		// 	fmt.Println("Failed to read responce", err)
+		// 	return
+		// }
+
+		netClient := &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				// DialContext: (&net.Dialer{
+				// 		LocalAddr: &net.TCPAddr{
+				// 			// IP: net.ParseIP("127.0.0.1"), //localhost
+				// 			// IP: net.ParseIP("localhost"),
+				// 			IP:localAddr.IP,
+				// 			Port: 8090,
+				// 		},
+				// 	Timeout:   30 * time.Second,
+				// 	KeepAlive: 30 * time.Second,
+				// 	DualStack: true,
+				// }).DialContext,
+				MaxIdleConns:          100,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
+			Timeout: time.Second * 30,
+		}
+
+		netClient.Transport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			// if addr == "google.com:443" {
+			//     addr = "216.58.198.206:443"
+			addr = "localhost:8090"
+			// }
+			dialer := &net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}
+			return dialer.DialContext(ctx, network, addr)
+		}
+
+		// req, err := http.NewRequest("GET", "http://node.com/sometestpass/"+stdreader.Text(), nil)
+		// if err != nil {
+		// 	panic(err)
+		// }
+
+		// fmt.Print("pppp2s > ")
+		// response, err := netClient.Do(req)
+		response, err := netClient.Get("http://zero.client.net/sometestpass/" + stdreader.Text())
+		// response, err := http.Get("http://localhost:8090/sometestpass/" + stdreader.Text())
+		if err != nil {
+			fmt.Println("Failed to get http", err)
+			return
+		}
+
+		resp, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			fmt.Println("Failed to read responce")
+			return
+		}
+
+		fmt.Printf("response: %v\n", string(resp))
+		fmt.Print("c2s > ")
+
+	}
+}
+func main() {
+	// grpcClient()
+
+	restClient()
 }

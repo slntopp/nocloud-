@@ -4,6 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/logger"
@@ -57,7 +62,7 @@ func main() {
 	}
 
 	opts = append(opts, grpc.WithBlock())
-	opts = append(opts,  grpc.WithTimeout(15 * time.Second))
+	opts = append(opts, grpc.WithTimeout(15*time.Second))
 
 	//Reconnection
 	for {
@@ -66,7 +71,7 @@ func main() {
 			defer time.Sleep(5 * time.Second)
 
 			lg.Info("Try to connect...", zap.String("host", host), zap.Skip())
-	
+
 			conn, err := grpc.Dial(host, opts...)
 			if err != nil {
 				lg.Error("fail to dial:", zap.Error(err))
@@ -84,9 +89,20 @@ func main() {
 				return
 			}
 
-			if err := stream.Send(&pb.InitTunnelRequest{Host: "ClientZero"}); err != nil { //todo Clientname?
-				lg.Error("Failed to send Hello:", zap.Error(err))
-				return
+			// if err := stream.Send(&pb.InitTunnelRequest{Host: "ClientZero"}); err != nil { //todo Clientname?
+			// 	lg.Error("Failed to send Hello:", zap.Error(err))
+			// 	return
+			// }
+
+			var netTransport = &http.Transport{
+				Dial: (&net.Dialer{
+					Timeout: 5 * time.Second,
+				}).Dial,
+				TLSHandshakeTimeout: 5 * time.Second,
+			}
+			var netClient = &http.Client{
+				Timeout:   time.Second * 10,
+				Transport: netTransport,
 			}
 
 			for {
@@ -100,9 +116,32 @@ func main() {
 					return
 				}
 
+				//http client
 				lg.Info("Received StreamData:"+in.Message, zap.Skip())
 
-				if err := stream.Send(&pb.InitTunnelRequest{Host: in.Message}); err != nil {
+				response, err := netClient.Get("https://ione-cloud.net/")
+				if err != nil {
+					lg.Error("Failed to get http:", zap.Error(err))
+					return
+				}
+
+				body1, err := ioutil.ReadAll(response.Body)
+				if err != nil {
+					lg.Error("Failed to read responce", zap.Error(err))
+					return
+				}
+				sb := stripRegex(string(body1))
+				// fmt.Println(sb, in.Message)
+				index1 := strings.Index(sb, in.Message)
+				if 0 < index1 {
+					sb = sb[index1 : index1+20]
+				} else {
+					sb = "Text not found!"
+				}
+
+				//-------http client
+
+				if err := stream.Send(&pb.InitTunnelRequest{Host: "Hello from GRPC client! " + sb}); err != nil {
 					lg.Error("Failed to send a note:", zap.Error(err))
 					return
 				}
@@ -110,4 +149,8 @@ func main() {
 		}()
 
 	}
+}
+func stripRegex(in string) string {
+	reg, _ := regexp.Compile("[^a-zA-Z0-9 <>()]+")
+	return reg.ReplaceAllString(in, "")
 }
