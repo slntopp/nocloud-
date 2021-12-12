@@ -14,154 +14,154 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// TunnelClient is the client API for Tunnel service.
+// SocketConnectionClient is the client API for SocketConnection service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type TunnelClient interface {
-	InitTunnel(ctx context.Context, opts ...grpc.CallOption) (Tunnel_InitTunnelClient, error)
-	SendData(ctx context.Context, in *SendDataRequest, opts ...grpc.CallOption) (*SendDataResponse, error)
+type SocketConnectionClient interface {
+	InitConnection(ctx context.Context, opts ...grpc.CallOption) (SocketConnection_InitConnectionClient, error)
+	ScalarSendData(ctx context.Context, in *HttpReQuest2Loc, opts ...grpc.CallOption) (*HttpReSp4Loc, error)
 }
 
-type tunnelClient struct {
+type socketConnectionClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewTunnelClient(cc grpc.ClientConnInterface) TunnelClient {
-	return &tunnelClient{cc}
+func NewSocketConnectionClient(cc grpc.ClientConnInterface) SocketConnectionClient {
+	return &socketConnectionClient{cc}
 }
 
-func (c *tunnelClient) InitTunnel(ctx context.Context, opts ...grpc.CallOption) (Tunnel_InitTunnelClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Tunnel_ServiceDesc.Streams[0], "/tunnel.Tunnel/InitTunnel", opts...)
+func (c *socketConnectionClient) InitConnection(ctx context.Context, opts ...grpc.CallOption) (SocketConnection_InitConnectionClient, error) {
+	stream, err := c.cc.NewStream(ctx, &SocketConnection_ServiceDesc.Streams[0], "/tunnel.SocketConnection/InitConnection", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &tunnelInitTunnelClient{stream}
+	x := &socketConnectionInitConnectionClient{stream}
 	return x, nil
 }
 
-type Tunnel_InitTunnelClient interface {
-	Send(*InitTunnelRequest) error
-	Recv() (*StreamData, error)
+type SocketConnection_InitConnectionClient interface {
+	Send(*HttpReSp4Loc) error
+	Recv() (*HttpReQuest2Loc, error)
 	grpc.ClientStream
 }
 
-type tunnelInitTunnelClient struct {
+type socketConnectionInitConnectionClient struct {
 	grpc.ClientStream
 }
 
-func (x *tunnelInitTunnelClient) Send(m *InitTunnelRequest) error {
+func (x *socketConnectionInitConnectionClient) Send(m *HttpReSp4Loc) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *tunnelInitTunnelClient) Recv() (*StreamData, error) {
-	m := new(StreamData)
+func (x *socketConnectionInitConnectionClient) Recv() (*HttpReQuest2Loc, error) {
+	m := new(HttpReQuest2Loc)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (c *tunnelClient) SendData(ctx context.Context, in *SendDataRequest, opts ...grpc.CallOption) (*SendDataResponse, error) {
-	out := new(SendDataResponse)
-	err := c.cc.Invoke(ctx, "/tunnel.Tunnel/SendData", in, out, opts...)
+func (c *socketConnectionClient) ScalarSendData(ctx context.Context, in *HttpReQuest2Loc, opts ...grpc.CallOption) (*HttpReSp4Loc, error) {
+	out := new(HttpReSp4Loc)
+	err := c.cc.Invoke(ctx, "/tunnel.SocketConnection/ScalarSendData", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// TunnelServer is the server API for Tunnel service.
-// All implementations must embed UnimplementedTunnelServer
+// SocketConnectionServer is the server API for SocketConnection service.
+// All implementations must embed UnimplementedSocketConnectionServer
 // for forward compatibility
-type TunnelServer interface {
-	InitTunnel(Tunnel_InitTunnelServer) error
-	SendData(context.Context, *SendDataRequest) (*SendDataResponse, error)
-	mustEmbedUnimplementedTunnelServer()
+type SocketConnectionServer interface {
+	InitConnection(SocketConnection_InitConnectionServer) error
+	ScalarSendData(context.Context, *HttpReQuest2Loc) (*HttpReSp4Loc, error)
+	mustEmbedUnimplementedSocketConnectionServer()
 }
 
-// UnimplementedTunnelServer must be embedded to have forward compatible implementations.
-type UnimplementedTunnelServer struct {
+// UnimplementedSocketConnectionServer must be embedded to have forward compatible implementations.
+type UnimplementedSocketConnectionServer struct {
 }
 
-func (UnimplementedTunnelServer) InitTunnel(Tunnel_InitTunnelServer) error {
-	return status.Errorf(codes.Unimplemented, "method InitTunnel not implemented")
+func (UnimplementedSocketConnectionServer) InitConnection(SocketConnection_InitConnectionServer) error {
+	return status.Errorf(codes.Unimplemented, "method InitConnection not implemented")
 }
-func (UnimplementedTunnelServer) SendData(context.Context, *SendDataRequest) (*SendDataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendData not implemented")
+func (UnimplementedSocketConnectionServer) ScalarSendData(context.Context, *HttpReQuest2Loc) (*HttpReSp4Loc, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ScalarSendData not implemented")
 }
-func (UnimplementedTunnelServer) mustEmbedUnimplementedTunnelServer() {}
+func (UnimplementedSocketConnectionServer) mustEmbedUnimplementedSocketConnectionServer() {}
 
-// UnsafeTunnelServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to TunnelServer will
+// UnsafeSocketConnectionServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SocketConnectionServer will
 // result in compilation errors.
-type UnsafeTunnelServer interface {
-	mustEmbedUnimplementedTunnelServer()
+type UnsafeSocketConnectionServer interface {
+	mustEmbedUnimplementedSocketConnectionServer()
 }
 
-func RegisterTunnelServer(s grpc.ServiceRegistrar, srv TunnelServer) {
-	s.RegisterService(&Tunnel_ServiceDesc, srv)
+func RegisterSocketConnectionServer(s grpc.ServiceRegistrar, srv SocketConnectionServer) {
+	s.RegisterService(&SocketConnection_ServiceDesc, srv)
 }
 
-func _Tunnel_InitTunnel_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(TunnelServer).InitTunnel(&tunnelInitTunnelServer{stream})
+func _SocketConnection_InitConnection_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(SocketConnectionServer).InitConnection(&socketConnectionInitConnectionServer{stream})
 }
 
-type Tunnel_InitTunnelServer interface {
-	Send(*StreamData) error
-	Recv() (*InitTunnelRequest, error)
+type SocketConnection_InitConnectionServer interface {
+	Send(*HttpReQuest2Loc) error
+	Recv() (*HttpReSp4Loc, error)
 	grpc.ServerStream
 }
 
-type tunnelInitTunnelServer struct {
+type socketConnectionInitConnectionServer struct {
 	grpc.ServerStream
 }
 
-func (x *tunnelInitTunnelServer) Send(m *StreamData) error {
+func (x *socketConnectionInitConnectionServer) Send(m *HttpReQuest2Loc) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *tunnelInitTunnelServer) Recv() (*InitTunnelRequest, error) {
-	m := new(InitTunnelRequest)
+func (x *socketConnectionInitConnectionServer) Recv() (*HttpReSp4Loc, error) {
+	m := new(HttpReSp4Loc)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func _Tunnel_SendData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendDataRequest)
+func _SocketConnection_ScalarSendData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HttpReQuest2Loc)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TunnelServer).SendData(ctx, in)
+		return srv.(SocketConnectionServer).ScalarSendData(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/tunnel.Tunnel/SendData",
+		FullMethod: "/tunnel.SocketConnection/ScalarSendData",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TunnelServer).SendData(ctx, req.(*SendDataRequest))
+		return srv.(SocketConnectionServer).ScalarSendData(ctx, req.(*HttpReQuest2Loc))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// Tunnel_ServiceDesc is the grpc.ServiceDesc for Tunnel service.
+// SocketConnection_ServiceDesc is the grpc.ServiceDesc for SocketConnection service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Tunnel_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "tunnel.Tunnel",
-	HandlerType: (*TunnelServer)(nil),
+var SocketConnection_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "tunnel.SocketConnection",
+	HandlerType: (*SocketConnectionServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SendData",
-			Handler:    _Tunnel_SendData_Handler,
+			MethodName: "ScalarSendData",
+			Handler:    _SocketConnection_ScalarSendData_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "InitTunnel",
-			Handler:       _Tunnel_InitTunnel_Handler,
+			StreamName:    "InitConnection",
+			Handler:       _SocketConnection_InitConnection_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

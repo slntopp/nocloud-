@@ -1,14 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
-	"regexp"
-	"strings"
+	"strconv"
 	"time"
 
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/logger"
@@ -62,7 +62,6 @@ func main() {
 	}
 
 	opts = append(opts, grpc.WithBlock())
-	opts = append(opts, grpc.WithTimeout(15*time.Second))
 
 	//Reconnection
 	for {
@@ -72,7 +71,11 @@ func main() {
 
 			lg.Info("Try to connect...", zap.String("host", host), zap.Skip())
 
-			conn, err := grpc.Dial(host, opts...)
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+
+			conn, err := grpc.DialContext(ctx, host, opts...)
+			// conn, err := grpc.Dial(host, opts...)
 			if err != nil {
 				lg.Error("fail to dial:", zap.Error(err))
 				return
@@ -81,28 +84,12 @@ func main() {
 
 			lg.Info("Connected:", zap.String("host", host), zap.Skip())
 
-			client := pb.NewTunnelClient(conn)
+			client := pb.NewSocketConnectionClient(conn)
 
-			stream, err := client.InitTunnel(context.Background()) //, &pb.InitTunnelRequest{Host: "testo"})
+			stream, err := client.InitConnection(context.Background()) //, &pb.InitTunnelRequest{Host: "testo"})
 			if err != nil {
 				lg.Error("Failed InitTunnel", zap.Error(err))
 				return
-			}
-
-			// if err := stream.Send(&pb.InitTunnelRequest{Host: "ClientZero"}); err != nil { //todo Clientname?
-			// 	lg.Error("Failed to send Hello:", zap.Error(err))
-			// 	return
-			// }
-
-			var netTransport = &http.Transport{
-				Dial: (&net.Dialer{
-					Timeout: 5 * time.Second,
-				}).Dial,
-				TLSHandshakeTimeout: 5 * time.Second,
-			}
-			var netClient = &http.Client{
-				Timeout:   time.Second * 10,
-				Transport: netTransport,
 			}
 
 			for {
@@ -116,32 +103,64 @@ func main() {
 					return
 				}
 
-				//http client
-				lg.Info("Received StreamData:"+in.Message, zap.Skip())
+				lg.Info("Received httpReQuest2Loc:", zap.String("TUNNEL_HOST", host), zap.Skip())
 
-				response, err := netClient.Get("https://ione-cloud.net/")
+				//http client
+				var req_struct pb.HttpData
+				err = json.Unmarshal(in.Json, &req_struct)
+				if err != nil {
+					lg.Error("json.Unmarshal", zap.String("Host", in.Message))
+					return
+				}
+
+				req_client, err := http.NewRequest(
+					req_struct.Method,
+					req_struct.FullURL,
+					bytes.NewBuffer([]byte(req_struct.Body)))
+				if err != nil {
+					lg.Error("http.NewRequest", zap.String("Host", in.Message))
+					return
+				}
+
+				var netClient = &http.Client{
+					Timeout: time.Second * 10,
+				}
+				//TODO critical/notcritical errors
+				response, err := netClient.Do(req_client)
 				if err != nil {
 					lg.Error("Failed to get http:", zap.Error(err))
 					return
 				}
 
-				body1, err := ioutil.ReadAll(response.Body)
+				bodyS, err := ioutil.ReadAll(response.Body)
 				if err != nil {
 					lg.Error("Failed to read responce", zap.Error(err))
 					return
 				}
-				sb := stripRegex(string(body1))
-				// fmt.Println(sb, in.Message)
-				index1 := strings.Index(sb, in.Message)
-				if 0 < index1 {
-					sb = sb[index1 : index1+20]
-				} else {
-					sb = "Text not found!"
-				}
-
 				//-------http client
 
-				if err := stream.Send(&pb.InitTunnelRequest{Host: "Hello from GRPC client! " + sb}); err != nil {
+				i, err := strconv.Atoi(response.Status[0:3])
+				if err != nil {
+					lg.Error("strconv.Atoi")
+				}
+
+				resp_struct := pb.HttpData{
+					Status: i, //todo
+					Method: response.Request.Method,
+					// FullURL:    *response.Request.URL,
+					Header: response.Header,
+					Body:   bodyS,
+				}
+
+				jsonResp, _ := json.Marshal(resp_struct)
+				if err != nil {
+					lg.Error("json.Marshal")
+					return
+				}
+
+				if err := stream.Send(&pb.HttpReSp4Loc{
+					Message: req_struct.Host,
+					Json:    jsonResp}); err != nil {
 					lg.Error("Failed to send a note:", zap.Error(err))
 					return
 				}
@@ -149,8 +168,4 @@ func main() {
 		}()
 
 	}
-}
-func stripRegex(in string) string {
-	reg, _ := regexp.Compile("[^a-zA-Z0-9 <>()]+")
-	return reg.ReplaceAllString(in, "")
 }
