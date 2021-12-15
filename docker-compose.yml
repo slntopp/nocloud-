@@ -5,7 +5,7 @@ services:
     image: ghcr.io/slntopp/nocloud-tunnel-mesh/client:latest
     environment:
       TUNNEL_HOST: tunnelserver:8080
-      #SECURE: "true"
+      DESTINATION_HOST: httpbin.org
     volumes:
       - ./cert:/cert
   tunnelserver:
@@ -13,6 +13,6 @@ services:
     image: ghcr.io/slntopp/nocloud-tunnel-mesh/server:latest
     ports:
       - 8080:8080
-      - 8090:8090
+      - 80:80
     volumes:
       - ./cert:/cert
