@@ -8,7 +8,7 @@ import (
 type HttpData struct {
 	Status  int
 	Method  string
-	FullURL string
+	Path string
 	Host string
 	Header  http.Header
 	Body    []byte

@@ -168,7 +168,6 @@ func (s *tunnelServer) startHttpServer() *http.Server {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// r.URL.String() or r.URL.RequestURI() show only r.URL.Path!
 		// r.URL.Scheme is empty! Possible  r.TLS == nil
-		FullUrl := "http://" + r.Host + r.URL.Path
 
 		host_soket, ok := s.hosts_sokets[r.Host]
 		// host_soket, ok := s.hosts_sokets["httpbin.org"]
@@ -186,7 +185,7 @@ func (s *tunnelServer) startHttpServer() *http.Server {
 		}
 
 		req_struct := pb.HttpData{
-			Status: 200, Method: r.Method, FullURL: FullUrl, Host: r.Host, Header: r.Header, Body: body}
+			Status: 200, Method: r.Method, Path: r.URL.Path, Host: r.Host, Header: r.Header, Body: body}
 		//TODO Zip json_req?
 		json_req, err := json.Marshal(req_struct)
 		if err != nil {
