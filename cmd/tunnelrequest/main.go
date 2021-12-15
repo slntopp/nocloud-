@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -104,98 +102,324 @@ func stripRegex(in string) string {
 
 func restClient() {
 
-	stdreader := bufio.NewScanner(os.Stdin)
-	fmt.Print("c2s > ")
-	for stdreader.Scan() {
+	// stdreader := bufio.NewScanner(os.Stdin)
+	// fmt.Print("c2s > ")
+	// for stdreader.Scan() {
 
-		// // localAddr, err := net.ResolveIPAddr("ip", "localhost")
-		// localAddr, err := net.ResolveIPAddr("ip", "127.0.0.1")
-		// if err != nil {
-		// 	fmt.Println("Failed to read responce", err)
-		// 	return
+	// // localAddr, err := net.ResolveIPAddr("ip", "localhost")
+	// localAddr, err := net.ResolveIPAddr("ip", "127.0.0.1")
+	// if err != nil {
+	// 	fmt.Println("Failed to read responce", err)
+	// 	return
+	// }
+
+	// //=========================
+	// http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+	// 	dialer := &net.Dialer{
+	// 		// Resolver: &net.Resolver{ //Resolver not work!
+	// 		// 	PreferGo: true,
+	// 		// 	Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+	// 		// 		d := net.Dialer{
+	// 		// 			Timeout: time.Duration(5) * time.Second,
+	// 		// 		}
+	// 		// 		return d.DialContext(ctx, "tcp", "localhost:8090")
+	// 		// 	},
+	// 		// },
+	// 	}
+
+	// 	return dialer.DialContext(ctx, network, "localhost:8090")
+	// }
+	// netClient := &http.Client{}
+
+	//=========================
+	netClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			// DialContext: (&net.Dialer{
+			// 		LocalAddr: &net.TCPAddr{
+			// 			// IP: net.ParseIP("127.0.0.1"), //localhost
+			// 			// IP: net.ParseIP("localhost"),
+			// 			IP:localAddr.IP,
+			// 			Port: 8090,
+			// 		},
+			// 	Timeout:   30 * time.Second,
+			// 	KeepAlive: 30 * time.Second,
+			// 	DualStack: true,
+			// }).DialContext,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+		Timeout: time.Second * 30,
+	}
+
+	netClient.Transport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		// if addr == "google.com:443" {
+		//     addr = "216.58.198.206:443"
+		addr = "localhost:8090"
 		// }
-
-		netClient := &http.Client{
-			Transport: &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
-				// DialContext: (&net.Dialer{
-				// 		LocalAddr: &net.TCPAddr{
-				// 			// IP: net.ParseIP("127.0.0.1"), //localhost
-				// 			// IP: net.ParseIP("localhost"),
-				// 			IP:localAddr.IP,
-				// 			Port: 8090,
-				// 		},
-				// 	Timeout:   30 * time.Second,
-				// 	KeepAlive: 30 * time.Second,
-				// 	DualStack: true,
-				// }).DialContext,
-				MaxIdleConns:          100,
-				IdleConnTimeout:       90 * time.Second,
-				TLSHandshakeTimeout:   10 * time.Second,
-				ExpectContinueTimeout: 1 * time.Second,
-			},
-			Timeout: time.Second * 30,
+		dialer := &net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
 		}
+		return dialer.DialContext(ctx, network, addr)
+	}
 
-		netClient.Transport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-			// if addr == "google.com:443" {
-			//     addr = "216.58.198.206:443"
-			addr = "localhost:8090"
-			// }
-			dialer := &net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-				DualStack: true,
-			}
-			return dialer.DialContext(ctx, network, addr)
-		}
+	// req, err := http.NewRequest("GET", "http://node.com/sometestpass/"+stdreader.Text(), nil)
+	// req, err := http.NewRequest("GET", strings.Replace("https://reqbin.com/echo", "https://", "http://", 1), nil)
 
-		// req, err := http.NewRequest("GET", "http://node.com/sometestpass/"+stdreader.Text(), nil)
-		// if err != nil {
-		// 	panic(err)
-		// }
-		//TODO Resolver
-		// fmt.Print("pppp2s > ")
-		// response, err := netClient.Do(req)
-		response, err := netClient.Get("http://ione-cloud.net/")
-		// response, err := netClient.Get("http://zero.client.net/sometestpass/" + stdreader.Text())
-		// response, err := http.Get("http://localhost:8090/sometestpass/" + stdreader.Text())
-		if err != nil {
-			fmt.Println("Failed to get http", err)
-			return
-		}
+	// req, err := http.NewRequest("POST",
+	// 	strings.Replace("https://reqbin.com/echo/post/json", "https://", "http://", 1),
+	// 	bytes.NewBuffer([]byte(`{
+	// 	"Id": 12345,
+	// 	"Customer": "John Smith",
+	// 	"Quantity": 1,
+	// 	"Price": 10.00
+	//   }`)))
+
+	// req, err := http.NewRequest("PUT",
+	// 	strings.Replace("https://reqbin.com/echo/put/json", "https://", "http://", 1),
+	// 	bytes.NewBuffer([]byte(`{
+	// 	  "Id": 12345,
+	// 	  "Customer": "John Smithkkkk",
+	// 	  "Quantity": 1,
+	// 	  "Price": 10.00
+	// 	}`)))
+
+	// req, err := http.NewRequest("DELETE",
+	// 	strings.Replace("https://reqbin.com/sample/delete/json", "https://", "http://", 1),
+	// 	bytes.NewBuffer([]byte(`{
+	// 	  "Id": 12345,
+	// 	  "Customer": "John Smithkkkk",
+	// 	  "Quantity": 1,
+	// 	  "Price": 10.00
+	// 	}`)))
+
+	// req, err := http.NewRequest("GET", strings.Replace("https://httpbin.org/status/500", "https://", "http://", 1), nil)
+	req, err := http.NewRequest("GET", strings.Replace("https://httpbin.org/delay/9", "https://", "http://", 1), nil)
+
+	if err != nil {
+		fmt.Println("Failed to get http", err)
+		return
+	}
+
+	req.Header = http.Header{
+		// "Host": []string{"www.host.com"},
+		"Content-Type": []string{"application/json"},
+		// "Authorization": []string{"Bearer Token"},
+	}
+
+	fmt.Println("Send long get")
+	response, err := netClient.Do(req)
+
+	//=========================
+
+	//TODO Resolver
+	// fmt.Print("pppp2s > ")
+	// response, err := netClient.Get("http://ione-cloud.net/")
+	// response, err := netClient.Get("http://zero.client.net/sometestpass/" + stdreader.Text())
+	// response, err := http.Get("http://localhost:8090/sometestpass/" + stdreader.Text())
+	if err != nil {
+		fmt.Println("Failed to get http", err)
+		return
+	}
 
 	//тестирование на несколько клиентов
 	//Тестирование POST, REST запросов
 	//Статусы клиента
-//install Redis
-		fmt.Println("response.Status", response.Status)
+	//install Redis
+	fmt.Println("Long response.Status", response.Status)
 
-		body1, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			fmt.Println("Failed to read responce")
-			return
-		}
-
-		sb := stripRegex(string(body1))
-		// fmt.Println(sb, in.Message)
-		index1 := strings.Index(sb, stdreader.Text())
-		if 0 < index1 {
-			sb = sb[index1 : index1+20]
-		} else {
-			sb = "Text not found!"
-		}
-
-		fmt.Printf("response: %v\n", string(sb))
-		fmt.Print("c2s > ")
-
+	body1, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println("Failed to read responce")
+		return
 	}
+	fmt.Printf("Long response: %v\n", string(body1))
+
+	// sb := stripRegex(string(body1))
+	// // fmt.Println(sb, in.Message)
+	// index1 := strings.Index(sb, stdreader.Text())
+	// if 0 < index1 {
+	// 	sb = sb[index1 : index1+20]
+	// } else {
+	// 	sb = "Text not found!"
+	// }
+
+	// fmt.Printf("response: %v\n", string(sb))
+
+	// fmt.Print("c2s > ")
+
+	// }
 }
 
+func restClient2() {
+
+	// stdreader := bufio.NewScanner(os.Stdin)
+	// fmt.Print("c2s > ")
+	// for stdreader.Scan() {
+
+	// // localAddr, err := net.ResolveIPAddr("ip", "localhost")
+	// localAddr, err := net.ResolveIPAddr("ip", "127.0.0.1")
+	// if err != nil {
+	// 	fmt.Println("Failed to read responce", err)
+	// 	return
+	// }
+
+	// //=========================
+	// http.DefaultTransport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+	// 	dialer := &net.Dialer{
+	// 		// Resolver: &net.Resolver{ //Resolver not work!
+	// 		// 	PreferGo: true,
+	// 		// 	Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+	// 		// 		d := net.Dialer{
+	// 		// 			Timeout: time.Duration(5) * time.Second,
+	// 		// 		}
+	// 		// 		return d.DialContext(ctx, "tcp", "localhost:8090")
+	// 		// 	},
+	// 		// },
+	// 	}
+
+	// 	return dialer.DialContext(ctx, network, "localhost:8090")
+	// }
+	// netClient := &http.Client{}
+
+	//=========================
+	netClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			// DialContext: (&net.Dialer{
+			// 		LocalAddr: &net.TCPAddr{
+			// 			// IP: net.ParseIP("127.0.0.1"), //localhost
+			// 			// IP: net.ParseIP("localhost"),
+			// 			IP:localAddr.IP,
+			// 			Port: 8090,
+			// 		},
+			// 	Timeout:   30 * time.Second,
+			// 	KeepAlive: 30 * time.Second,
+			// 	DualStack: true,
+			// }).DialContext,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+		Timeout: time.Second * 30,
+	}
+
+	netClient.Transport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		// if addr == "google.com:443" {
+		//     addr = "216.58.198.206:443"
+		addr = "localhost:8090"
+		// }
+		dialer := &net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}
+		return dialer.DialContext(ctx, network, addr)
+	}
+
+	// req, err := http.NewRequest("GET", "http://node.com/sometestpass/"+stdreader.Text(), nil)
+	// req, err := http.NewRequest("GET", strings.Replace("https://reqbin.com/echo", "https://", "http://", 1), nil)
+
+	// req, err := http.NewRequest("POST",
+	// 	strings.Replace("https://reqbin.com/echo/post/json", "https://", "http://", 1),
+	// 	bytes.NewBuffer([]byte(`{
+	// 	"Id": 12345,
+	// 	"Customer": "John Smith",
+	// 	"Quantity": 1,
+	// 	"Price": 10.00
+	//   }`)))
+
+	// req, err := http.NewRequest("PUT",
+	// 	strings.Replace("https://httpbin.org/put", "https://", "http://", 1),
+	// 	bytes.NewBuffer([]byte(`{
+	// 	  "Id": 12345,
+	// 	  "Customer": "John Smithkkkk",
+	// 	  "Quantity": 1,
+	// 	  "Price": 10.00
+	// 	}`)))
+
+	// req, err := http.NewRequest("DELETE",
+	// 	strings.Replace("https://reqbin.com/sample/delete/json", "https://", "http://", 1),
+	// 	bytes.NewBuffer([]byte(`{
+	// 	  "Id": 12345,
+	// 	  "Customer": "John Smithkkkk",
+	// 	  "Quantity": 1,
+	// 	  "Price": 10.00
+	// 	}`)))
+
+	req, err := http.NewRequest("GET", strings.Replace("https://httpbin.org/status/404", "https://", "http://", 1), nil)
+	// req, err := http.NewRequest("GET", strings.Replace("https://httpbin.org/delay/9", "https://", "http://", 1), nil)
+
+	if err != nil {
+		fmt.Println("Failed to get http", err)
+		return
+	}
+
+	req.Header = http.Header{
+		// "Host": []string{"www.host.com"},
+		"Content-Type": []string{"application/json"},
+		// "Authorization": []string{"Bearer Token"},
+	}
+
+	fmt.Println("Send short get")
+	response, err := netClient.Do(req)
+
+	//=========================
+
+	//TODO Resolver
+	// fmt.Print("pppp2s > ")
+	// response, err := netClient.Get("http://ione-cloud.net/")
+	// response, err := netClient.Get("http://zero.client.net/sometestpass/" + stdreader.Text())
+	// response, err := http.Get("http://localhost:8090/sometestpass/" + stdreader.Text())
+	if err != nil {
+		fmt.Println("Failed to get http", err)
+		return
+	}
+
+	//тестирование на несколько клиентов
+	//Тестирование POST, REST запросов
+	//Статусы клиента
+	//install Redis
+	//Asynch Requests
+	//Function add/delete hosts
+	fmt.Println("Short response.Status", response.Status)
+
+	body1, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println("Failed to read responce")
+		return
+	}
+	fmt.Printf("Short response: %v\n", string(body1))
+
+	// sb := stripRegex(string(body1))
+	// // fmt.Println(sb, in.Message)
+	// index1 := strings.Index(sb, stdreader.Text())
+	// if 0 < index1 {
+	// 	sb = sb[index1 : index1+20]
+	// } else {
+	// 	sb = "Text not found!"
+	// }
+
+	// fmt.Printf("response: %v\n", string(sb))
+
+	// fmt.Print("c2s > ")
+
+	// }
+}
 func main() {
 	// grpcClient()
 
-	restClient()
+	go restClient()
+	time.Sleep(1 * time.Second)
+	// <-time.After(3 * time.Second)
+	restClient2()
+	time.Sleep(11 * time.Second)
+		
 
 	// httpJSONClient()
 }

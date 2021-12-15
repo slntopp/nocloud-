@@ -20,6 +20,9 @@ const _ = grpc.SupportPackageIsVersion7
 type SocketConnectionClient interface {
 	InitConnection(ctx context.Context, opts ...grpc.CallOption) (SocketConnection_InitConnectionClient, error)
 	ScalarSendData(ctx context.Context, in *HttpReQuest2Loc, opts ...grpc.CallOption) (*HttpReSp4Loc, error)
+	Add(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error)
+	Edit(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error)
+	Delete(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error)
 }
 
 type socketConnectionClient struct {
@@ -70,12 +73,42 @@ func (c *socketConnectionClient) ScalarSendData(ctx context.Context, in *HttpReQ
 	return out, nil
 }
 
+func (c *socketConnectionClient) Add(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error) {
+	out := new(HostFingerprintResp)
+	err := c.cc.Invoke(ctx, "/tunnel.SocketConnection/Add", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *socketConnectionClient) Edit(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error) {
+	out := new(HostFingerprintResp)
+	err := c.cc.Invoke(ctx, "/tunnel.SocketConnection/Edit", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *socketConnectionClient) Delete(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error) {
+	out := new(HostFingerprintResp)
+	err := c.cc.Invoke(ctx, "/tunnel.SocketConnection/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SocketConnectionServer is the server API for SocketConnection service.
 // All implementations must embed UnimplementedSocketConnectionServer
 // for forward compatibility
 type SocketConnectionServer interface {
 	InitConnection(SocketConnection_InitConnectionServer) error
 	ScalarSendData(context.Context, *HttpReQuest2Loc) (*HttpReSp4Loc, error)
+	Add(context.Context, *HostFingerprint) (*HostFingerprintResp, error)
+	Edit(context.Context, *HostFingerprint) (*HostFingerprintResp, error)
+	Delete(context.Context, *HostFingerprint) (*HostFingerprintResp, error)
 	mustEmbedUnimplementedSocketConnectionServer()
 }
 
@@ -88,6 +121,15 @@ func (UnimplementedSocketConnectionServer) InitConnection(SocketConnection_InitC
 }
 func (UnimplementedSocketConnectionServer) ScalarSendData(context.Context, *HttpReQuest2Loc) (*HttpReSp4Loc, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ScalarSendData not implemented")
+}
+func (UnimplementedSocketConnectionServer) Add(context.Context, *HostFingerprint) (*HostFingerprintResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Add not implemented")
+}
+func (UnimplementedSocketConnectionServer) Edit(context.Context, *HostFingerprint) (*HostFingerprintResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Edit not implemented")
+}
+func (UnimplementedSocketConnectionServer) Delete(context.Context, *HostFingerprint) (*HostFingerprintResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedSocketConnectionServer) mustEmbedUnimplementedSocketConnectionServer() {}
 
@@ -146,6 +188,60 @@ func _SocketConnection_ScalarSendData_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SocketConnection_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HostFingerprint)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SocketConnectionServer).Add(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.SocketConnection/Add",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SocketConnectionServer).Add(ctx, req.(*HostFingerprint))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SocketConnection_Edit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HostFingerprint)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SocketConnectionServer).Edit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.SocketConnection/Edit",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SocketConnectionServer).Edit(ctx, req.(*HostFingerprint))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SocketConnection_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HostFingerprint)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SocketConnectionServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.SocketConnection/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SocketConnectionServer).Delete(ctx, req.(*HostFingerprint))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SocketConnection_ServiceDesc is the grpc.ServiceDesc for SocketConnection service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -156,6 +252,18 @@ var SocketConnection_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ScalarSendData",
 			Handler:    _SocketConnection_ScalarSendData_Handler,
+		},
+		{
+			MethodName: "Add",
+			Handler:    _SocketConnection_Add_Handler,
+		},
+		{
+			MethodName: "Edit",
+			Handler:    _SocketConnection_Edit_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _SocketConnection_Delete_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

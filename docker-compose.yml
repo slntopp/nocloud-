@@ -13,5 +13,6 @@ services:
     image: ghcr.io/slntopp/nocloud-tunnel-mesh/server:latest
     ports:
       - 8080:8080
+      - 8090:8090
     volumes:
       - ./cert:/cert

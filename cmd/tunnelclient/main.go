@@ -82,7 +82,7 @@ func main() {
 			}
 			defer conn.Close()
 
-			lg.Info("Connected:", zap.String("host", host), zap.Skip())
+			lg.Info("Connected to:", zap.String("host", host), zap.Skip())
 
 			client := pb.NewSocketConnectionClient(conn)
 
@@ -95,7 +95,7 @@ func main() {
 			for {
 				in, err := stream.Recv()
 				if err == io.EOF {
-					lg.Info("Connection closed", zap.String("TUNNEL_HOST", host), zap.Skip())
+					lg.Info("Connection closed", zap.String("Message", in.Message), zap.Skip())
 					return
 				}
 				if err != nil {
@@ -103,67 +103,90 @@ func main() {
 					return
 				}
 
-				lg.Info("Received httpReQuest2Loc:", zap.String("TUNNEL_HOST", host), zap.Skip())
+				lg.Info("Received httpReQuest2Loc:", zap.String("Message", in.Message), zap.Skip())
 
-				//http client
-				var req_struct pb.HttpData
-				err = json.Unmarshal(in.Json, &req_struct)
-				if err != nil {
-					lg.Error("json.Unmarshal", zap.String("Host", in.Message))
-					return
-				}
+				go func(id uint32, inJson []byte) {
+					//http client
+					var req_struct pb.HttpData
+					err = json.Unmarshal(in.Json, &req_struct)
+					if err != nil {
+						lg.Error("json.Unmarshal", zap.String("Message", in.Message))
+						return
+					}
 
-				req_client, err := http.NewRequest(
-					req_struct.Method,
-					req_struct.FullURL,
-					bytes.NewBuffer([]byte(req_struct.Body)))
-				if err != nil {
-					lg.Error("http.NewRequest", zap.String("Host", in.Message))
-					return
-				}
+					req_client, err := http.NewRequest(
+						req_struct.Method,
+						req_struct.FullURL,
+						bytes.NewBuffer([]byte(req_struct.Body)))
+					if err != nil {
+						lg.Error("http.NewRequest", zap.String("Message", in.Message))
+						return
+					}
 
-				var netClient = &http.Client{
-					Timeout: time.Second * 10,
-				}
-				//TODO critical/notcritical errors
-				response, err := netClient.Do(req_client)
-				if err != nil {
-					lg.Error("Failed to get http:", zap.Error(err))
-					return
-				}
+					var resp_struct pb.HttpData
 
-				bodyS, err := ioutil.ReadAll(response.Body)
-				if err != nil {
-					lg.Error("Failed to read responce", zap.Error(err))
-					return
-				}
-				//-------http client
+					var netClient = &http.Client{
+						Timeout: time.Second * 20,
+						// Transport: &http.Transport{
+						// 	TLSClientConfig: &tls.Config{
+						// 		InsecureSkipVerify: true,
+						// 	},
+						// },
+					}
+					//TODO critical/notcritical errors
+					response, err := netClient.Do(req_client)
+					if err != nil {
+						lg.Error("Failed to get http:", zap.Error(err))
+						//Return error and response==nil if server cant request.
+						//No error if server sended any status
 
-				i, err := strconv.Atoi(response.Status[0:3])
-				if err != nil {
-					lg.Error("strconv.Atoi")
-				}
+						resp_struct = pb.HttpData{
+							Status: http.StatusBadRequest,
+							Method: req_struct.Method,
+							// FullURL:    *response.Request.URL,
+							Header: req_struct.Header,
+							Body:   []byte(err.Error()),
+						}
 
-				resp_struct := pb.HttpData{
-					Status: i, //todo
-					Method: response.Request.Method,
-					// FullURL:    *response.Request.URL,
-					Header: response.Header,
-					Body:   bodyS,
-				}
+					} else {
 
-				jsonResp, _ := json.Marshal(resp_struct)
-				if err != nil {
-					lg.Error("json.Marshal")
-					return
-				}
+						bodyS, err := ioutil.ReadAll(response.Body)
+						if err != nil {
+							lg.Error("Failed to read responce", zap.Error(err))
+							return
+						}
 
-				if err := stream.Send(&pb.HttpReSp4Loc{
-					Message: req_struct.Host,
-					Json:    jsonResp}); err != nil {
-					lg.Error("Failed to send a note:", zap.Error(err))
-					return
-				}
+						i, err := strconv.Atoi(response.Status[0:3])
+						if err != nil {
+							lg.Error("strconv.Atoi", zap.Error(err))
+						}
+
+						resp_struct = pb.HttpData{
+							Status: i, //todo
+							Method: response.Request.Method,
+							// FullURL:    *response.Request.URL,
+							Header: response.Header,
+							Body:   bodyS,
+						}
+
+					}
+					//-------http client
+
+					jsonResp, err := json.Marshal(resp_struct)
+					if err != nil {
+						lg.Error("json.Marshal", zap.Error(err))
+						return
+					}
+
+					if err := stream.Send(&pb.HttpReSp4Loc{
+						Id:      id,
+						Message: req_struct.Host,
+						Json:    jsonResp}); err != nil {
+						lg.Error("Failed to send a note:", zap.Error(err))
+						return
+					}
+
+				}(in.Id, in.Json)
 			}
 		}()
 

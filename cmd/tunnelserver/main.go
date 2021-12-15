@@ -7,12 +7,16 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
+	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -37,27 +41,74 @@ func init() {
 	viper.SetDefault("SECURE", true)
 }
 
-type tunnelServerParams struct {
-	stream pb.SocketConnection_InitConnectionServer
-	ch     chan error
-}
-
 type tunnelServer struct {
+	mutex sync.Mutex
 	pb.UnimplementedSocketConnectionServer
-	tsps map[string]tunnelServerParams
+	hosts_fingerprints map[string]string
+	hosts_sokets       map[string]pb.SocketConnection_InitConnectionServer
+	request_id         map[uint32]chan ([]byte)
 }
 
-func getFingerprint(c []byte) []byte {
+func getFingerprint(c []byte) string {
 	sum := sha256.Sum256(c)
-	return sum[:]
+	return hex.EncodeToString(sum[:])
 }
 
-func getHostnameFromDB(c string) string {
-	if c == "419d3335b2b533526d4e7f6f1041b3c492d086cad0f5876739800ffd51659545" {
-		// return "zero.client.net"
-		return "ione-cloud.net"
+func (s *tunnelServer) getHostFingerprintsFromDB() {
+	fp := "419d3335b2b533526d4e7f6f1041b3c492d086cad0f5876739800ffd51659545"
+	s.hosts_fingerprints[fp] = "httpbin.org"
+	// s.hosts_fingerprints[fp] ="reqbin.com"
+	// s.hosts_fingerprints[fp] ="zero.client.net"
+	// s.hosts_fingerprints[fp] ="ione-cloud.net"
+}
+
+//Send data to client by grpc
+func (s *tunnelServer) ScalarSendData(context.Context, *pb.HttpReQuest2Loc) (*pb.HttpReSp4Loc, error) {
+	return &pb.HttpReSp4Loc{}, nil
+}
+
+//Add host/Fingerprint to DB
+func (s *tunnelServer) Add(ctx context.Context, in *pb.HostFingerprint) (*pb.HostFingerprintResp, error) {
+
+	_, ok := s.hosts_fingerprints[in.Fingerprint]
+	if ok {
+		return &pb.HostFingerprintResp{Message: in.Host + " exists!", Sucsess: false}, nil
 	}
-	return ""
+
+	s.mutex.Lock()
+	s.hosts_fingerprints[in.Fingerprint] = in.Host
+	s.mutex.Unlock()
+
+	return &pb.HostFingerprintResp{Message: in.Host + " added", Sucsess: true}, nil
+}
+
+//Edit host/Fingerprint to DB
+func (s *tunnelServer) Edit(ctx context.Context, in *pb.HostFingerprint) (*pb.HostFingerprintResp, error) {
+
+	_, ok := s.hosts_fingerprints[in.Fingerprint]
+	if !ok {
+		return &pb.HostFingerprintResp{Message: in.Host + " not exist!", Sucsess: false}, nil
+	}
+	s.mutex.Lock()
+	s.hosts_fingerprints[in.Fingerprint] = in.Host
+	s.mutex.Unlock()
+
+	return &pb.HostFingerprintResp{Message: in.Host + " edited", Sucsess: true}, nil
+}
+
+//Delete host/Fingerprint to DB
+func (s *tunnelServer) Delete(ctx context.Context, in *pb.HostFingerprint) (*pb.HostFingerprintResp, error) {
+	s.hosts_fingerprints[in.Fingerprint] = in.Host
+
+	_, ok := s.hosts_fingerprints[in.Fingerprint]
+	if !ok {
+		return &pb.HostFingerprintResp{Message: in.Host + " not exist!", Sucsess: false}, nil
+	}
+	s.mutex.Lock()
+	delete(s.hosts_fingerprints, in.Fingerprint)
+	s.mutex.Unlock()
+
+	return &pb.HostFingerprintResp{Message: in.Host + " deleted", Sucsess: true}, nil
 }
 
 //Initiate soket connection from Location
@@ -65,39 +116,74 @@ func (s *tunnelServer) InitConnection(stream pb.SocketConnection_InitConnectionS
 
 	peer, _ := peer.FromContext(stream.Context())
 	raw := peer.AuthInfo.(credentials.TLSInfo).State.PeerCertificates[0].Raw
-	hex_sert_raw := hex.EncodeToString(getFingerprint(raw))
+	hex_sert_raw := getFingerprint(raw)
 
-	host := getHostnameFromDB(hex_sert_raw)
-	s.tsps[host] = tunnelServerParams{stream, make(chan error)}
-	defer delete(s.tsps, host)
+	host, ok := s.hosts_fingerprints[hex_sert_raw]
+	if !ok {
+		cn := peer.AuthInfo.(credentials.TLSInfo).State.PeerCertificates[0].Subject.CommonName
+		lg.Error("Strange clienf sert", zap.String("Fingerprint", hex_sert_raw), zap.String("CommonName", cn))
+		return errors.New("strange clienf sert:" + cn)
+	}
 
-	return <-s.tsps[host].ch
+	s.mutex.Lock()
+	s.hosts_sokets[host] = stream
+	s.mutex.Unlock()
+	defer func() {
+		s.mutex.Lock()
+		delete(s.hosts_sokets, host)
+		s.mutex.Unlock()
+	}()
+
+	for {
+		//receive json from location
+		in, err := stream.Recv()
+		if err == io.EOF {
+			lg.Error("Stream connection lost", zap.String("Host", host))
+			s.request_id[in.Id] <- nil
+			return err
+		}
+		if err != nil {
+			lg.Error("stream.Recv", zap.String("Host", host))
+			s.request_id[in.Id] <- nil
+			return err
+		}
+
+		rid, ok := s.request_id[in.Id]
+		if !ok {
+			lg.Error("Request does not exist", zap.String("Host", host))
+			continue
+		}
+		rid <- in.Json
+
+		lg.Info("Received data from:", zap.String("Host", host))
+
+	}
 }
 
 //Start http server to pass request to grpc, next Location
 func (s *tunnelServer) startHttpServer() *http.Server {
-	srv := &http.Server{Addr: ":" + viper.GetString("HTTP_PORT")}
+	port := viper.GetString("HTTP_PORT")
+	srv := &http.Server{Addr: ":" + port}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// r.URL.String() or r.URL.RequestURI() show only r.URL.Path!
+		// r.URL.Scheme is empty! Possible  r.TLS == nil
+		FullUrl := "http://" + r.Host + r.URL.Path
 
-		tsp, ok := s.tsps[r.Host]
+		host_soket, ok := s.hosts_sokets[r.Host]
+		// host_soket, ok := s.hosts_sokets["httpbin.org"]
 		if !ok {
 			lg.Error("Connection not found", zap.String("GetHost", r.Host), zap.String("f", "SendData"))
-			http.Error(w, "GRCP connection not found", http.StatusInternalServerError)
+			http.Error(w, " not found", http.StatusInternalServerError)
 			return
 		}
 		//send json to location
-		body, _ := io.ReadAll(r.Body)
-
-		// r.URL.String() or r.URL.RequestURI()
-		//show only r.URL.Path!
-		var FullUrl string
-		if r.TLS == nil {
-			FullUrl = "http://"
-		} else {
-			FullUrl = "https://"
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			lg.Error("Failed io.ReadAll", zap.String("Host", r.Host))
+			http.Error(w, "Failed io.ReadAll", http.StatusInternalServerError)
+			return
 		}
-		FullUrl += r.Host + r.URL.Path
 
 		req_struct := pb.HttpData{
 			Status: 200, Method: r.Method, FullURL: FullUrl, Host: r.Host, Header: r.Header, Body: body}
@@ -109,49 +195,57 @@ func (s *tunnelServer) startHttpServer() *http.Server {
 			return
 		}
 
-		err = tsp.stream.Send(&pb.HttpReQuest2Loc{Message: r.Host, Json: json_req})
+		//request ID
+		//uint32	0 — 4 294 967 295
+		rand.Seed(time.Now().UnixNano())
+		rnd := rand.Uint32()
+
+		s.mutex.Lock()
+		s.request_id[rnd] = make(chan []byte)
+		s.mutex.Unlock()
+		defer func() {
+			s.mutex.Lock()
+			delete(s.request_id, rnd)
+			s.mutex.Unlock()
+		}()
+
+		err = host_soket.Send(&pb.HttpReQuest2Loc{Id: rnd, Message: r.Host, Json: json_req})
 		if err != nil {
 			lg.Error("Failed stream.Send", zap.String("Host", r.Host))
-			tsp.ch <- err
 			http.Error(w, "Failed stream.Send", http.StatusInternalServerError)
 			return
 		}
-		//receive json from location
-		in, err := tsp.stream.Recv()
-		if err == io.EOF {
-			lg.Error("Stream connection lost", zap.String("Host", r.Host))
-			tsp.ch <- nil
-			http.Error(w, "Stream connection lost", http.StatusInternalServerError)
-			return
-		}
-		if err != nil {
-			lg.Error("stream.Recv", zap.String("Host", r.Host))
-			tsp.ch <- err
-			http.Error(w, "stream.Recv", http.StatusInternalServerError)
-			return
-		}
 
-		var resp pb.HttpData
-		err = json.Unmarshal(in.Json, &resp)
-		if err != nil {
-			lg.Error("json.Unmarshal", zap.String("Host", r.Host))
-			tsp.ch <- err
-			http.Error(w, "json.Unmarshal", http.StatusInternalServerError)
-			return
+		lg.Info("Sended data to:", zap.String("Host", r.Host))
+
+		select {
+		case inJson := <-s.request_id[rnd]:
+			if inJson == nil {
+				http.Error(w, "Connection closed", http.StatusServiceUnavailable)
+			} else {
+				var resp pb.HttpData
+				err = json.Unmarshal(inJson, &resp)
+				if err != nil {
+					lg.Error("json.Unmarshal", zap.String("Host", r.Host))
+					http.Error(w, "json.Unmarshal", http.StatusInternalServerError)
+					return
+				}
+
+				w.WriteHeader(resp.Status)
+				w.Write([]byte(resp.Body))
+			}
+		case <-time.After(30 * time.Second): // for close and defer delete(s.request_id, rnd)
+			http.Error(w, "Failed stream.Recv, timeout", http.StatusGatewayTimeout)
 		}
-
-		lg.Info("IS:", zap.String("Host", r.Host))
-
-		w.WriteHeader(resp.Status)
-		w.Write([]byte(resp.Body))
 
 	})
 
 	go func() {
 		fmt.Println("startHttpServer")
+		lg.Info("StartHttpServer on localhost:", zap.String("port", port), zap.Skip())
 		// always returns error. ErrServerClosed on graceful close
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-			// unexpected error. port in use?
+			// unexected error. port in use?
 			lg.Fatal("failed to serve grpc:", zap.Error(err))
 		}
 	}()
@@ -215,10 +309,17 @@ func main() {
 	}
 
 	// opts = append(opts, grpc.StreamInterceptor(streamInterceptor))
-
+	//
 	grpcServer := grpc.NewServer(opts...)
 
-	newServiceImpl := &tunnelServer{tsps: make(map[string]tunnelServerParams)}
+	newServiceImpl := &tunnelServer{
+		hosts_fingerprints: make(map[string]string),
+		hosts_sokets:       make(map[string]pb.SocketConnection_InitConnectionServer),
+		request_id:         make(map[uint32]chan ([]byte)),
+	}
+
+	newServiceImpl.getHostFingerprintsFromDB()
+
 	pb.RegisterSocketConnectionServer(grpcServer, newServiceImpl)
 
 	srv := newServiceImpl.startHttpServer()
