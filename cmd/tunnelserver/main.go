@@ -4,14 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"log"
 	"math/rand"
 	"net"
 	"net/http"
@@ -37,8 +34,6 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetDefault("GRPC_PORT", "8080")
-	viper.SetDefault("HTTP_PORT", "8090")
-	viper.SetDefault("SECURE", true)
 }
 
 type tunnelServer struct {
@@ -162,8 +157,7 @@ func (s *tunnelServer) InitConnection(stream pb.SocketConnection_InitConnectionS
 
 //Start http server to pass request to grpc, next Location
 func (s *tunnelServer) startHttpServer() *http.Server {
-	port := viper.GetString("HTTP_PORT")
-	srv := &http.Server{Addr: ":" + port}
+	srv := &http.Server{Addr: ":80"}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// r.URL.String() or r.URL.RequestURI() show only r.URL.Path!
@@ -241,7 +235,7 @@ func (s *tunnelServer) startHttpServer() *http.Server {
 
 	go func() {
 		fmt.Println("startHttpServer")
-		lg.Info("StartHttpServer on localhost:", zap.String("port", port), zap.Skip())
+		lg.Info("StartHttpServer on 0.0.0.0:80")
 		// always returns error. ErrServerClosed on graceful close
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 			// unexected error. port in use?
@@ -262,40 +256,24 @@ func main() {
 
 	var opts []grpc.ServerOption
 
-	if viper.GetBool("SECURE") {
 		//openssl req -new -newkey rsa:4096 -x509 -sha256 -days 30 -nodes -out server.crt -keyout server.key
-		cert, err := tls.LoadX509KeyPair("cert/server.crt", "cert/server.key")
+		cert, err := tls.LoadX509KeyPair("/cert/server.crt", "/cert/server.key")
+		// cert, err := tls.LoadX509KeyPair("cert/server.crt", "cert/server.key")
 		if err != nil {
 			lg.Fatal("server: loadkeys:", zap.Error(err))
 		}
-
-		// Load CA cert
-		caCertPool := x509.NewCertPool()
-		//Certification authority, CA
-		//A CA certificate is a digital certificate issued by a certificate authority (CA), so SSL clients (such as web browsers) can use it to verify the SSL certificates sign by this CA.
-		//todo собрать клиентские сертификаты в один файл
-		caCert, err := ioutil.ReadFile("cert/0client.crt")
-		if err != nil {
-			log.Fatal(err)
-		}
-		caCertPool.AppendCertsFromPEM(caCert)
-		caCert, err = ioutil.ReadFile("cert/1client.crt")
-		if err != nil {
-			log.Fatal(err)
-		}
-		caCertPool.AppendCertsFromPEM(caCert)
 
 		// Note if we don't tls.RequireAnyClientCert client side certs are ignored.
 		config := &tls.Config{
 			Certificates: []tls.Certificate{cert},
 			// ClientCAs:    caCertPool,//It work! Peer client sertificates autenification
 			ClientAuth: tls.RequireAnyClientCert,
-			//ClientAuth: tls.RequireAndVerifyClientCert,
-			RootCAs: caCertPool,
-			// VerifyPeerCertificate: customVerify,
+			//ClientAuth:fyClientCert,
+			// RootCAs: caCertPool,
+			// VerifyPeerCertificate:  tls.RequireAndVericustomVerify,
 			// VerifyPeerCertificate: is called only after normal certificate verification https://pkg.go.dev/crypto/tls#Config
-			InsecureSkipVerify: false,
-			//InsecureSkipVerify: true,
+			// InsecureSkipVerify: false,
+			InsecureSkipVerify: true,
 		}
 		cred := credentials.NewTLS(config)
 
@@ -305,7 +283,6 @@ func main() {
 		// opts = append(opts, grpc.Creds(credentials.NewServerTLSFromCert(&cert)))
 		// failed to complete security handshake on grpc?
 		// https://stackoverflow.com/questions/43829022/failed-to-complete-security-handshake-on-grpc
-	}
 
 	// opts = append(opts, grpc.StreamInterceptor(streamInterceptor))
 	//
@@ -324,7 +301,7 @@ func main() {
 	srv := newServiceImpl.startHttpServer()
 
 	// pb.RegisterTunnelServer(grpcServer, &tunnelServer{})
-	lg.Info("gRPC-Server Listening on localhost:", zap.String("port", port), zap.Skip())
+	lg.Info("gRPC-Server Listening on 0.0.0.0:", zap.String("port", port), zap.Skip())
 	if err := grpcServer.Serve(lis); err != nil {
 		lg.Fatal("failed to serve grpc:", zap.Error(err))
 	}
