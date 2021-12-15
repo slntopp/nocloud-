@@ -127,6 +127,7 @@ func main() {
 						lg.Error("http.NewRequest", zap.String("Message", in.Message))
 						return
 					}
+					req_client.Header = req_struct.Header
 
 					var resp_struct pb.HttpData
 
