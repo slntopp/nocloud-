@@ -3,24 +3,17 @@ package tunnel;
 
 option go_package = "github.com/slntopp/nocloud-tunnel-mesh";
 
-message InitTunnelRequest {
-    string host = 1;
-}
-
-message StreamData {
+message httpReQuest2Loc {
     string message = 1;
+    bytes json = 2;
 }
 
-message SendDataRequest {
-    string host = 1;
-    string message = 2;
+message httpReSp4Loc {
+    string message = 1;
+    bytes json = 2;
 }
 
-message SendDataResponse {
-    bool result = 1;
-}
-
-service Tunnel {
-    rpc InitTunnel(stream InitTunnelRequest) returns (stream StreamData) {};
-    rpc SendData(SendDataRequest) returns (SendDataResponse);
+service SocketConnection {
+    rpc InitConnection(stream httpReSp4Loc) returns (stream httpReQuest2Loc) {};
+    rpc ScalarSendData(httpReQuest2Loc) returns (httpReSp4Loc);
 }
