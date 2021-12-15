@@ -23,6 +23,7 @@ var (
 	lg     *zap.Logger
 	host   string
 	secure bool
+	DESTINATION_HOST string
 )
 
 func init() {
@@ -30,10 +31,12 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetDefault("TUNNEL_HOST", "localhost:8080")
+	viper.SetDefault("DESTINATION_HOST", "ione")
 	viper.SetDefault("SECURE", true)
 
 	host = viper.GetString("TUNNEL_HOST")
 	secure = viper.GetBool("SECURE")
+	DESTINATION_HOST = viper.GetString("DESTINATION_HOST")
 }
 
 func main() {
@@ -42,7 +45,8 @@ func main() {
 	opts = append(opts, grpc.WithInsecure())
 	if secure {
 		// Load client cert
-		cert, err := tls.LoadX509KeyPair("cert/0client.crt", "cert/0client.key")
+		cert, err := tls.LoadX509KeyPair("/cert/client.crt", "/cert/client.key")
+		// cert, err := tls.LoadX509KeyPair("cert/0client.crt", "cert/0client.key")
 		// cert, err := tls.LoadX509KeyPair("cert/1client.crt", "cert/1client.key")
 		if err != nil {
 			lg.Fatal("fail to LoadX509KeyPair:", zap.Error(err))
@@ -114,9 +118,10 @@ func main() {
 						return
 					}
 
+					url := DESTINATION_HOST + req_struct.Path
 					req_client, err := http.NewRequest(
 						req_struct.Method,
-						req_struct.FullURL,
+						url,
 						bytes.NewBuffer([]byte(req_struct.Body)))
 					if err != nil {
 						lg.Error("http.NewRequest", zap.String("Message", in.Message))
