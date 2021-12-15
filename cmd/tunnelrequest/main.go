@@ -122,12 +122,12 @@ func restClient() {
 	// 		// 		d := net.Dialer{
 	// 		// 			Timeout: time.Duration(5) * time.Second,
 	// 		// 		}
-	// 		// 		return d.DialContext(ctx, "tcp", "localhost:8090")
+	// 		// 		return d.DialContext(ctx, "tcp", "localhost")
 	// 		// 	},
 	// 		// },
 	// 	}
 
-	// 	return dialer.DialContext(ctx, network, "localhost:8090")
+	// 	return dialer.DialContext(ctx, network, "localhost")
 	// }
 	// netClient := &http.Client{}
 
@@ -140,7 +140,7 @@ func restClient() {
 			// 			// IP: net.ParseIP("127.0.0.1"), //localhost
 			// 			// IP: net.ParseIP("localhost"),
 			// 			IP:localAddr.IP,
-			// 			Port: 8090,
+			// 			Port: 8000,
 			// 		},
 			// 	Timeout:   30 * time.Second,
 			// 	KeepAlive: 30 * time.Second,
@@ -157,7 +157,7 @@ func restClient() {
 	netClient.Transport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		// if addr == "google.com:443" {
 		//     addr = "216.58.198.206:443"
-		addr = "localhost:8090"
+		addr = "localhost"
 		// }
 		dialer := &net.Dialer{
 			Timeout:   30 * time.Second,
@@ -220,7 +220,7 @@ func restClient() {
 	// fmt.Print("pppp2s > ")
 	// response, err := netClient.Get("http://ione-cloud.net/")
 	// response, err := netClient.Get("http://zero.client.net/sometestpass/" + stdreader.Text())
-	// response, err := http.Get("http://localhost:8090/sometestpass/" + stdreader.Text())
+	// response, err := http.Get("http://localhost/sometestpass/" + stdreader.Text())
 	if err != nil {
 		fmt.Println("Failed to get http", err)
 		return
@@ -277,12 +277,12 @@ func restClient2() {
 	// 		// 		d := net.Dialer{
 	// 		// 			Timeout: time.Duration(5) * time.Second,
 	// 		// 		}
-	// 		// 		return d.DialContext(ctx, "tcp", "localhost:8090")
+	// 		// 		return d.DialContext(ctx, "tcp", "localhost")
 	// 		// 	},
 	// 		// },
 	// 	}
 
-	// 	return dialer.DialContext(ctx, network, "localhost:8090")
+	// 	return dialer.DialContext(ctx, network, "localhost")
 	// }
 	// netClient := &http.Client{}
 
@@ -295,7 +295,7 @@ func restClient2() {
 			// 			// IP: net.ParseIP("127.0.0.1"), //localhost
 			// 			// IP: net.ParseIP("localhost"),
 			// 			IP:localAddr.IP,
-			// 			Port: 8090,
+			// 			Port: 8000,
 			// 		},
 			// 	Timeout:   30 * time.Second,
 			// 	KeepAlive: 30 * time.Second,
@@ -312,7 +312,7 @@ func restClient2() {
 	netClient.Transport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		// if addr == "google.com:443" {
 		//     addr = "216.58.198.206:443"
-		addr = "localhost:8090"
+		addr = "localhost"
 		// }
 		dialer := &net.Dialer{
 			Timeout:   30 * time.Second,
@@ -375,7 +375,7 @@ func restClient2() {
 	// fmt.Print("pppp2s > ")
 	// response, err := netClient.Get("http://ione-cloud.net/")
 	// response, err := netClient.Get("http://zero.client.net/sometestpass/" + stdreader.Text())
-	// response, err := http.Get("http://localhost:8090/sometestpass/" + stdreader.Text())
+	// response, err := http.Get("http://localhost/sometestpass/" + stdreader.Text())
 	if err != nil {
 		fmt.Println("Failed to get http", err)
 		return
