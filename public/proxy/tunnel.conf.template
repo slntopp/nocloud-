@@ -1,0 +1,12 @@
+upstream tunnel {
+    server tunnel:8080;
+}
+
+server {
+    listen 8080 ssl http2;
+    server_name tunnel.${BASE_DOMAIN};
+
+    location / {
+        grpc_pass grpc://tunnel;
+    }
+}
