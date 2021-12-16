@@ -109,8 +109,7 @@ func StartGRPCServer() {
 	var opts []grpc.ServerOption
 
 	//openssl req -new -newkey rsa:4096 -x509 -sha256 -days 30 -nodes -out server.crt -keyout server.key
-	// cert, err := tls.LoadX509KeyPair("/cert/server.crt", "/cert/server.key")
-	cert, err := tls.LoadX509KeyPair("cert/server.crt", "cert/server.key")
+	cert, err := tls.LoadX509KeyPair("/cert/server.crt", "/cert/server.key")
 	if err != nil {
 		lg.Fatal("server: loadkeys:", zap.Error(err))
 	}

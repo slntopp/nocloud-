@@ -158,6 +158,7 @@ func restClient(url string, message string) {
 			IdleConnTimeout:       90 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
+			// DisableCompression:    true,
 		},
 		Timeout: time.Second * 30,
 	}

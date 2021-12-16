@@ -76,9 +76,13 @@ func (s *tunnelServer) startHttpServer() *http.Server {
 				http.Error(w, "json.Unmarshal", http.StatusInternalServerError)
 				return
 			}
-			lg.Info("Send body to http", zap.Binary("Body", resp.Body), zap.String("Host", r.Host))
-			w.WriteHeader(resp.Status)
-			w.Write([]byte(resp.Body))
+			for key, values := range resp.Header {
+				for _, val := range values {
+					w.Header().Add(key, val)
+				}
+			}
+			w.WriteHeader(resp.Status) //if you have w.WriteHeader(200) before w.Header the headers will not be set!!!
+			w.Write(resp.Body)
 			lg.Info("Send request to http", zap.String("Host", r.Host))
 
 		case <-host_soket.ctx.Done():

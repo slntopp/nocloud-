@@ -30,6 +30,7 @@ func httpClient(stream pb.SocketConnection_InitConnectionClient, message string,
 		lg.Error("http.NewRequest", zap.String("Message", message))
 		return
 	}
+	
 	req_client.Header = req_struct.Header
 
 	var resp_struct pb.HttpData
@@ -64,7 +65,6 @@ func httpClient(stream pb.SocketConnection_InitConnectionClient, message string,
 			lg.Error("Failed to read responce", zap.Error(err))
 			return
 		}
-		lg.Info("Send body to server", zap.Binary("Body", bodyS), zap.String("Host", host))
 
 		stt, err := strconv.Atoi(response.Status[0:3])
 		if err != nil {
