@@ -12,7 +12,7 @@ import (
 )
 
 //Start http server to pass request to grpc, then next Location
-func (s *tunnelServer) startHttpServer() *http.Server {
+func (s *TunnelServer) StartHttpServer() *http.Server {
 	log := s.log.Named("HTTPServer")
 	srv := &http.Server{Addr: ":80"}
 
