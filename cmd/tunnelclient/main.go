@@ -20,6 +20,7 @@ var (
 
 	host             string
 	secure           bool
+	dest 			string
 )
 
 func init() {
@@ -33,6 +34,7 @@ func init() {
 
 	host = viper.GetString("TUNNEL_HOST")
 	secure = viper.GetBool("SECURE")
+	dest = viper.GetString("DESTINATION_HOST")
 }
 
 func main() {
@@ -101,7 +103,7 @@ func main() {
 				log.Debug("Received request from server:", zap.String("Message", in.Message), zap.Skip())
 
 				//TODO send errors from httpClient
-				go tclient.HttpClient(log, stream, in.Message, in.Id, in.Json)
+				go tclient.HttpClient(log, dest, stream, in.Message, in.Id, in.Json)
 			}
 		}()
 

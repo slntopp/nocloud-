@@ -9,17 +9,10 @@ import (
 	"time"
 
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
-var	DESTINATION_HOST string
-
-func init() {
-	DESTINATION_HOST = viper.GetString("DESTINATION_HOST")
-}
-
-func HttpClient(logger *zap.Logger, stream pb.SocketConnection_InitConnectionClient, message string, id uint32, inJson []byte) {
+func HttpClient(logger *zap.Logger, dest string, stream pb.SocketConnection_InitConnectionClient, message string, id uint32, inJson []byte) {
 	log := logger.Named("HTTPClient")
 	
 	//-------http client
@@ -30,7 +23,7 @@ func HttpClient(logger *zap.Logger, stream pb.SocketConnection_InitConnectionCli
 		return
 	}
 
-	url := DESTINATION_HOST + req_struct.Path
+	url := dest + req_struct.Path
 	req_client, err := http.NewRequest(
 		req_struct.Method,
 		url,
