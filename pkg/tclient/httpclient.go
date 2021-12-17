@@ -9,15 +9,24 @@ import (
 	"time"
 
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
-func httpClient(stream pb.SocketConnection_InitConnectionClient, message string, id uint32, inJson []byte) {
+var	DESTINATION_HOST string
+
+func init() {
+	DESTINATION_HOST = viper.GetString("DESTINATION_HOST")
+}
+
+func HttpClient(logger *zap.Logger, stream pb.SocketConnection_InitConnectionClient, message string, id uint32, inJson []byte) {
+	log := logger.Named("HTTPClient")
+	
 	//-------http client
 	var req_struct pb.HttpData
 	err := json.Unmarshal(inJson, &req_struct)
 	if err != nil {
-		lg.Error("json.Unmarshal", zap.String("Message", message))
+		log.Error("json.Unmarshal", zap.String("Message", message))
 		return
 	}
 
@@ -27,7 +36,7 @@ func httpClient(stream pb.SocketConnection_InitConnectionClient, message string,
 		url,
 		bytes.NewBuffer([]byte(req_struct.Body)))
 	if err != nil {
-		lg.Error("http.NewRequest", zap.String("Message", message))
+		log.Error("http.NewRequest", zap.String("Message", message))
 		return
 	}
 	
@@ -46,14 +55,13 @@ func httpClient(stream pb.SocketConnection_InitConnectionClient, message string,
 
 	response, err := netClient.Do(req_client)
 	if err != nil {
-		lg.Error("Failed to get http:", zap.Error(err))
+		log.Error("Failed to get http:", zap.Error(err))
 		//Return error and response==nil if server cant request.
 		//No error if server sended any status
 
 		resp_struct = pb.HttpData{
 			Status: http.StatusBadRequest,
 			Method: req_struct.Method,
-			// FullURL:    *response.Request.URL,
 			Header: req_struct.Header,
 			Body:   []byte(err.Error()),
 		}
@@ -62,19 +70,18 @@ func httpClient(stream pb.SocketConnection_InitConnectionClient, message string,
 
 		bodyS, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			lg.Error("Failed to read responce", zap.Error(err))
+			log.Error("Failed to read responce", zap.Error(err))
 			return
 		}
 
 		stt, err := strconv.Atoi(response.Status[0:3])
 		if err != nil {
-			lg.Error("strconv.Atoi", zap.Error(err))
+			log.Error("strconv.Atoi", zap.Error(err))
 		}
 
 		resp_struct = pb.HttpData{
 			Status: stt,
 			Method: response.Request.Method,
-			// FullURL:    *response.Request.URL,
 			Header: response.Header,
 			Body:   bodyS,
 		}
@@ -84,7 +91,7 @@ func httpClient(stream pb.SocketConnection_InitConnectionClient, message string,
 
 	jsonResp, err := json.Marshal(resp_struct)
 	if err != nil {
-		lg.Error("json.Marshal", zap.Error(err))
+		log.Error("json.Marshal", zap.Error(err))
 		return
 	}
 
@@ -92,7 +99,7 @@ func httpClient(stream pb.SocketConnection_InitConnectionClient, message string,
 		Id:      id,
 		Message: req_struct.Host,
 		Json:    jsonResp}); err != nil {
-		lg.Error("Failed to send a note:", zap.Error(err))
+		log.Error("Failed to send a note:", zap.Error(err))
 		return
 	}
 
