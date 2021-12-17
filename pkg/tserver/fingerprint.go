@@ -16,7 +16,7 @@ func getFingerprint(c []byte) string {
 //Gets fingerprint-host chain from DB
 func (s *TunnelServer) LoadHostFingerprintsFromDB() {
 	fp := "419d3335b2b533526d4e7f6f1041b3c492d086cad0f5876739800ffd51659545"
-	s.fingerprints_hosts[fp] = "httpbin.org"
+	s.fingerprints_hosts[fp] = "demo.ione.nocloud"
 	// s.hosts_fingerprints[fp] ="reqbin.com"
 	// s.hosts_fingerprints[fp] ="zero.client.net"
 	// s.hosts_fingerprints[fp] ="ione-cloud.net"
