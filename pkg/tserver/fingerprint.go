@@ -9,7 +9,7 @@ import (
 )
 
 //Make hash od raw sertificate as sha256
-func getFingerprint(c []byte) string {
+func MakeFingerprint(c []byte) string {
 	sum := sha256.Sum256(c)
 	return hex.EncodeToString(sum[:])
 }

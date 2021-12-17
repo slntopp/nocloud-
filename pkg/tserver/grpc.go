@@ -50,7 +50,7 @@ func (s *TunnelServer) InitConnection(stream pb.SocketConnection_InitConnectionS
 	log := s.log.Named("InitConnection")
 	peer, _ := peer.FromContext(stream.Context())
 	raw := peer.AuthInfo.(credentials.TLSInfo).State.PeerCertificates[0].Raw
-	hex_sert_raw := getFingerprint(raw)
+	hex_sert_raw := MakeFingerprint(raw)
 
 	host, ok := s.fingerprints_hosts[hex_sert_raw]
 	if !ok {
@@ -95,4 +95,3 @@ func (s *TunnelServer) InitConnection(stream pb.SocketConnection_InitConnectionS
 		log.Info("Received data from:", zap.String("Host", host))
 	}
 }
-
