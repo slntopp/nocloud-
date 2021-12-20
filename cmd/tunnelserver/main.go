@@ -8,6 +8,7 @@ import (
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/tserver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -15,7 +16,11 @@ import (
 )
 
 var (
+	port string
 	log *zap.Logger
+
+	arangodbHost 	string
+	arangodbCred 	string
 )
 
 func init() {
@@ -23,13 +28,29 @@ func init() {
 
 	log = nocloud.NewLogger()
 
+	viper.SetDefault("DB_HOST", "db:8529")
+	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("GRPC_PORT", "8080")
+
+	arangodbHost 	= viper.GetString("DB_HOST")
+	arangodbCred 	= viper.GetString("DB_CRED")
+	port = viper.GetString("GRPC_PORT")
 }
 
 func main() {
+	defer func() {
+		_ = log.Sync()
+	}()
 	log.Info("Starting Tunnel Server service")
 
-	port := viper.GetString("GRPC_PORT")
+	log.Info("Setting up DB Connection")
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	log.Info("DB connection established")
+
+	log.Info("Checking collection")
+	tserver.EnsureCollectionExists(log, db)
+	log.Info("Collection checked")
+
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatal("failed to listen:", zap.Error(err))
@@ -57,7 +78,7 @@ func main() {
 	opts = append(opts, grpc.Creds(cred))
 	
 	grpcServer := grpc.NewServer(opts...)
-	server := tserver.NewTunnelServer(log)
+	server := tserver.NewTunnelServer(log, db)
 	server.LoadHostFingerprintsFromDB()
 	pb.RegisterSocketConnectionServer(grpcServer, server)
 

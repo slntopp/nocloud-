@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
 
+	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
 	"go.uber.org/zap"
 )
@@ -27,14 +28,44 @@ type TunnelServer struct {
 	hosts              map[string]tunnelHost
 	request_id         map[uint32]chan ([]byte)
 
+	col driver.Collection
+
 	log *zap.Logger
 }
 
-func NewTunnelServer(log *zap.Logger) *TunnelServer {
+const HOSTS_COLLECTION = "TunnelHosts"
+
+func EnsureCollectionExists(logger *zap.Logger, db driver.Database) {
+	log := logger.Named("EnsureCollectionExists")
+
+	options := &driver.CreateCollectionOptions{
+		KeyOptions: &driver.CollectionKeyOptions{AllowUserKeys: true, Type: "uuid"},
+	}
+	log.Debug("Checking Collection existence", zap.String("collection", HOSTS_COLLECTION))
+	exists, err := db.CollectionExists(context.TODO(), HOSTS_COLLECTION)
+	if err != nil {
+		log.Fatal("Failed to check collection exists", zap.Error(err))
+	}
+	if exists {
+		return
+	}
+
+	log.Debug("Collection doesn't exist, creating")
+	_, err = db.CreateCollection(context.TODO(), HOSTS_COLLECTION, options)
+	if err != nil {
+		log.Fatal("Error creating Collection", zap.String("collection", HOSTS_COLLECTION), zap.Any("options", options), zap.Error(err))
+	}
+	log.Debug("Collection existence ensured")
+}
+
+func NewTunnelServer(log *zap.Logger, db driver.Database) *TunnelServer {
+	col, _ := db.Collection(context.TODO(), HOSTS_COLLECTION)
 	return &TunnelServer{
 		fingerprints_hosts: make(map[string]string),
 		hosts:              make(map[string]tunnelHost),
 		request_id:         make(map[uint32]chan ([]byte)),
+
+		col: col,
 
 		log: log.Named("TunnelServer"),
 	}
