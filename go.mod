@@ -3,6 +3,7 @@ module github.com/slntopp/nocloud-tunnel-mesh
 go 1.17
 
 require (
+	github.com/arangodb/go-driver v1.2.1
 	github.com/slntopp/nocloud v0.0.0-20211217092504-43c8608c3b48
 	github.com/spf13/viper v1.10.1
 	go.uber.org/zap v1.19.1
@@ -11,7 +12,6 @@ require (
 )
 
 require (
-	github.com/arangodb/go-driver v1.2.1 // indirect
 	github.com/arangodb/go-velocypack v0.0.0-20200318135517-5af53c29c67e // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
