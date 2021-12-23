@@ -17,10 +17,10 @@ import (
 
 var (
 	port string
-	log *zap.Logger
+	log  *zap.Logger
 
-	arangodbHost 	string
-	arangodbCred 	string
+	arangodbHost string
+	arangodbCred string
 )
 
 func init() {
@@ -28,12 +28,13 @@ func init() {
 
 	log = nocloud.NewLogger()
 
-	viper.SetDefault("DB_HOST", "db:8529")
+	viper.SetDefault("DB_HOST", "localhost:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("GRPC_PORT", "8080")
+	viper.SetDefault("DB_GRPC_PORT", "8000")
 
-	arangodbHost 	= viper.GetString("DB_HOST")
-	arangodbCred 	= viper.GetString("DB_CRED")
+	arangodbHost = viper.GetString("DB_HOST")
+	arangodbCred = viper.GetString("DB_CRED")
 	port = viper.GetString("GRPC_PORT")
 }
 
@@ -55,7 +56,7 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to listen:", zap.Error(err))
 	}
-	
+
 	var opts []grpc.ServerOption
 
 	//openssl req -new -newkey rsa:4096 -x509 -sha256 -days 30 -nodes -out server.crt -keyout server.key
@@ -76,7 +77,7 @@ func main() {
 	cred := credentials.NewTLS(config)
 
 	opts = append(opts, grpc.Creds(cred))
-	
+
 	grpcServer := grpc.NewServer(opts...)
 	server := tserver.NewTunnelServer(log, db)
 	server.LoadHostFingerprintsFromDB()
@@ -84,6 +85,9 @@ func main() {
 
 	srv := server.StartHttpServer()
 	defer srv.Shutdown(context.TODO())
+
+	dbsrv := server.StartDBgRPCServer()
+	defer dbsrv.Stop()
 
 	log.Info("gRPC-Server Listening on 0.0.0.0:", zap.String("port", port), zap.Skip())
 	if err := grpcServer.Serve(lis); err != nil {

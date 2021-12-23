@@ -19,10 +19,6 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SocketConnectionClient interface {
 	InitConnection(ctx context.Context, opts ...grpc.CallOption) (SocketConnection_InitConnectionClient, error)
-	ScalarSendData(ctx context.Context, in *HttpReQuest2Loc, opts ...grpc.CallOption) (*HttpReSp4Loc, error)
-	Add(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error)
-	Edit(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error)
-	Delete(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error)
 }
 
 type socketConnectionClient struct {
@@ -64,51 +60,11 @@ func (x *socketConnectionInitConnectionClient) Recv() (*HttpReQuest2Loc, error) 
 	return m, nil
 }
 
-func (c *socketConnectionClient) ScalarSendData(ctx context.Context, in *HttpReQuest2Loc, opts ...grpc.CallOption) (*HttpReSp4Loc, error) {
-	out := new(HttpReSp4Loc)
-	err := c.cc.Invoke(ctx, "/tunnel.SocketConnection/ScalarSendData", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *socketConnectionClient) Add(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error) {
-	out := new(HostFingerprintResp)
-	err := c.cc.Invoke(ctx, "/tunnel.SocketConnection/Add", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *socketConnectionClient) Edit(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error) {
-	out := new(HostFingerprintResp)
-	err := c.cc.Invoke(ctx, "/tunnel.SocketConnection/Edit", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *socketConnectionClient) Delete(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error) {
-	out := new(HostFingerprintResp)
-	err := c.cc.Invoke(ctx, "/tunnel.SocketConnection/Delete", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // SocketConnectionServer is the server API for SocketConnection service.
 // All implementations must embed UnimplementedSocketConnectionServer
 // for forward compatibility
 type SocketConnectionServer interface {
 	InitConnection(SocketConnection_InitConnectionServer) error
-	ScalarSendData(context.Context, *HttpReQuest2Loc) (*HttpReSp4Loc, error)
-	Add(context.Context, *HostFingerprint) (*HostFingerprintResp, error)
-	Edit(context.Context, *HostFingerprint) (*HostFingerprintResp, error)
-	Delete(context.Context, *HostFingerprint) (*HostFingerprintResp, error)
 	mustEmbedUnimplementedSocketConnectionServer()
 }
 
@@ -118,18 +74,6 @@ type UnimplementedSocketConnectionServer struct {
 
 func (UnimplementedSocketConnectionServer) InitConnection(SocketConnection_InitConnectionServer) error {
 	return status.Errorf(codes.Unimplemented, "method InitConnection not implemented")
-}
-func (UnimplementedSocketConnectionServer) ScalarSendData(context.Context, *HttpReQuest2Loc) (*HttpReSp4Loc, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ScalarSendData not implemented")
-}
-func (UnimplementedSocketConnectionServer) Add(context.Context, *HostFingerprint) (*HostFingerprintResp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Add not implemented")
-}
-func (UnimplementedSocketConnectionServer) Edit(context.Context, *HostFingerprint) (*HostFingerprintResp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Edit not implemented")
-}
-func (UnimplementedSocketConnectionServer) Delete(context.Context, *HostFingerprint) (*HostFingerprintResp, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedSocketConnectionServer) mustEmbedUnimplementedSocketConnectionServer() {}
 
@@ -170,102 +114,13 @@ func (x *socketConnectionInitConnectionServer) Recv() (*HttpReSp4Loc, error) {
 	return m, nil
 }
 
-func _SocketConnection_ScalarSendData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HttpReQuest2Loc)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SocketConnectionServer).ScalarSendData(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/tunnel.SocketConnection/ScalarSendData",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SocketConnectionServer).ScalarSendData(ctx, req.(*HttpReQuest2Loc))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SocketConnection_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HostFingerprint)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SocketConnectionServer).Add(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/tunnel.SocketConnection/Add",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SocketConnectionServer).Add(ctx, req.(*HostFingerprint))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SocketConnection_Edit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HostFingerprint)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SocketConnectionServer).Edit(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/tunnel.SocketConnection/Edit",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SocketConnectionServer).Edit(ctx, req.(*HostFingerprint))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _SocketConnection_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HostFingerprint)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SocketConnectionServer).Delete(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/tunnel.SocketConnection/Delete",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SocketConnectionServer).Delete(ctx, req.(*HostFingerprint))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // SocketConnection_ServiceDesc is the grpc.ServiceDesc for SocketConnection service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var SocketConnection_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "tunnel.SocketConnection",
 	HandlerType: (*SocketConnectionServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "ScalarSendData",
-			Handler:    _SocketConnection_ScalarSendData_Handler,
-		},
-		{
-			MethodName: "Add",
-			Handler:    _SocketConnection_Add_Handler,
-		},
-		{
-			MethodName: "Edit",
-			Handler:    _SocketConnection_Edit_Handler,
-		},
-		{
-			MethodName: "Delete",
-			Handler:    _SocketConnection_Delete_Handler,
-		},
-	},
+	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "InitConnection",
@@ -274,5 +129,163 @@ var SocketConnection_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
+	Metadata: "pkg/proto/tunnel.proto",
+}
+
+// DataBaseClient is the client API for DataBase service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type DataBaseClient interface {
+	Add(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error)
+	Edit(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error)
+	Delete(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error)
+}
+
+type dataBaseClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewDataBaseClient(cc grpc.ClientConnInterface) DataBaseClient {
+	return &dataBaseClient{cc}
+}
+
+func (c *dataBaseClient) Add(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error) {
+	out := new(HostFingerprintResp)
+	err := c.cc.Invoke(ctx, "/tunnel.DataBase/Add", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBaseClient) Edit(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error) {
+	out := new(HostFingerprintResp)
+	err := c.cc.Invoke(ctx, "/tunnel.DataBase/Edit", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBaseClient) Delete(ctx context.Context, in *HostFingerprint, opts ...grpc.CallOption) (*HostFingerprintResp, error) {
+	out := new(HostFingerprintResp)
+	err := c.cc.Invoke(ctx, "/tunnel.DataBase/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DataBaseServer is the server API for DataBase service.
+// All implementations must embed UnimplementedDataBaseServer
+// for forward compatibility
+type DataBaseServer interface {
+	Add(context.Context, *HostFingerprint) (*HostFingerprintResp, error)
+	Edit(context.Context, *HostFingerprint) (*HostFingerprintResp, error)
+	Delete(context.Context, *HostFingerprint) (*HostFingerprintResp, error)
+	mustEmbedUnimplementedDataBaseServer()
+}
+
+// UnimplementedDataBaseServer must be embedded to have forward compatible implementations.
+type UnimplementedDataBaseServer struct {
+}
+
+func (UnimplementedDataBaseServer) Add(context.Context, *HostFingerprint) (*HostFingerprintResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Add not implemented")
+}
+func (UnimplementedDataBaseServer) Edit(context.Context, *HostFingerprint) (*HostFingerprintResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Edit not implemented")
+}
+func (UnimplementedDataBaseServer) Delete(context.Context, *HostFingerprint) (*HostFingerprintResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedDataBaseServer) mustEmbedUnimplementedDataBaseServer() {}
+
+// UnsafeDataBaseServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DataBaseServer will
+// result in compilation errors.
+type UnsafeDataBaseServer interface {
+	mustEmbedUnimplementedDataBaseServer()
+}
+
+func RegisterDataBaseServer(s grpc.ServiceRegistrar, srv DataBaseServer) {
+	s.RegisterService(&DataBase_ServiceDesc, srv)
+}
+
+func _DataBase_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HostFingerprint)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBaseServer).Add(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.DataBase/Add",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBaseServer).Add(ctx, req.(*HostFingerprint))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBase_Edit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HostFingerprint)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBaseServer).Edit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.DataBase/Edit",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBaseServer).Edit(ctx, req.(*HostFingerprint))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBase_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HostFingerprint)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBaseServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/tunnel.DataBase/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBaseServer).Delete(ctx, req.(*HostFingerprint))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// DataBase_ServiceDesc is the grpc.ServiceDesc for DataBase service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var DataBase_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "tunnel.DataBase",
+	HandlerType: (*DataBaseServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Add",
+			Handler:    _DataBase_Add_Handler,
+		},
+		{
+			MethodName: "Edit",
+			Handler:    _DataBase_Edit_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _DataBase_Delete_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "pkg/proto/tunnel.proto",
 }

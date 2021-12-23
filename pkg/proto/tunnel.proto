@@ -15,8 +15,8 @@ message httpReSp4Loc {
     bytes json = 3;
 }
 message HostFingerprint {
-    string host = 1;
     string fingerprint = 2;
+    string host = 1;
 }
 message HostFingerprintResp {
     string message = 1;
@@ -25,8 +25,9 @@ message HostFingerprintResp {
 
 service SocketConnection {
     rpc InitConnection(stream httpReSp4Loc) returns (stream httpReQuest2Loc) {};
-    rpc ScalarSendData(httpReQuest2Loc) returns (httpReSp4Loc);
-    
+}
+
+service DataBase {    
     rpc Add(HostFingerprint) returns (HostFingerprintResp);
     rpc Edit(HostFingerprint) returns (HostFingerprintResp);
     rpc Delete(HostFingerprint) returns (HostFingerprintResp);
