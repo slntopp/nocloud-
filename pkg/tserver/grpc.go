@@ -14,13 +14,13 @@ import (
 	"go.uber.org/zap"
 )
 
-
-
+//Keeps all connections from clients (hosts) and ctx.WithCancel cut all http-requests if connection lost
 type tunnelHost struct {
 	ctx    context.Context
 	stream pb.SocketConnection_InitConnectionServer
 }
 
+//struct for GRPC interface SocketConnectionServer and exchange data between methods
 type TunnelServer struct {
 	mutex sync.Mutex
 	pb.UnimplementedSocketConnectionServer
@@ -33,33 +33,17 @@ type TunnelServer struct {
 	log *zap.Logger
 }
 
-const HOSTS_COLLECTION = "TunnelHosts"
-
-func EnsureCollectionExists(logger *zap.Logger, db driver.Database) {
-	log := logger.Named("EnsureCollectionExists")
-
-	options := &driver.CreateCollectionOptions{
-		KeyOptions: &driver.CollectionKeyOptions{AllowUserKeys: true, Type: "uuid"},
-	}
-	log.Debug("Checking Collection existence", zap.String("collection", HOSTS_COLLECTION))
-	exists, err := db.CollectionExists(context.TODO(), HOSTS_COLLECTION)
-	if err != nil {
-		log.Fatal("Failed to check collection exists", zap.Error(err))
-	}
-	if exists {
-		return
-	}
-
-	log.Debug("Collection doesn't exist, creating")
-	_, err = db.CreateCollection(context.TODO(), HOSTS_COLLECTION, options)
-	if err != nil {
-		log.Fatal("Error creating Collection", zap.String("collection", HOSTS_COLLECTION), zap.Any("options", options), zap.Error(err))
-	}
-	log.Debug("Collection existence ensured")
-}
-
+//Initialize new struct for GRPC interface
 func NewTunnelServer(log *zap.Logger, db driver.Database) *TunnelServer {
 	col, _ := db.Collection(context.TODO(), HOSTS_COLLECTION)
+	est := true//todo &true not work
+	col.EnsureFullTextIndex(context.TODO(), []string{"host"}, &driver.EnsureFullTextIndexOptions{
+		MinLength:    2,
+		InBackground: true,
+		Name:         "textIndex",
+		Estimates:    &est,
+	})
+
 	return &TunnelServer{
 		fingerprints_hosts: make(map[string]string),
 		hosts:              make(map[string]tunnelHost),
@@ -110,7 +94,7 @@ func (s *TunnelServer) InitConnection(stream pb.SocketConnection_InitConnectionS
 			if err == io.EOF {
 				log.Error("Stream connection lost", zap.String("Host", host))
 			} else {
-				log.Error("stream.Recv", zap.String("Host", host))
+				log.Error("stream.Recv",  zap.Error(err))
 			}
 			cancel()
 			return err

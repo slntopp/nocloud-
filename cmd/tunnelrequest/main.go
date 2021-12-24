@@ -1,20 +1,17 @@
 package main
 
 import (
-	"bufio"
 	"context"
-	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
 	"github.com/spf13/viper"
@@ -22,59 +19,23 @@ import (
 
 func init() {
 	viper.AutomaticEnv()
-	viper.SetDefault("TUNNEL_HOST", "localhost:8080")
+	// viper.SetDefault("DB_HOST", "localhost:8080")
+	viper.SetDefault("DB_GRPC_PORT", "8000")
 	viper.SetDefault("SECURE", true)
 }
+func bdgrpcClient() {
 
-func grpcClient() {
-
-	host := viper.GetString("TUNNEL_HOST")
+	host := viper.GetString("DB_GRPC_PORT")
 
 	var opts []grpc.DialOption
+
+	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	// opts = append(opts, grpc.WithInsecure())
-	// if viper.GetBool("SECURE") {
-	// 	cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
-	// 	opts[0] = grpc.WithTransportCredentials(cred)
-	// }
-
-	if viper.GetBool("SECURE") {
-		// Load client cert
-		//cert, err := tls.LoadX509KeyPair("cert/0client.crt", "cert/0client.key")
-		cert, err := tls.LoadX509KeyPair("cert/1client.crt", "cert/1client.key")
-		if err != nil {
-			log.Fatal("fail to LoadX509KeyPair:", err)
-		}
-
-		// // Load CA cert
-		// //Certification authority, CA
-		// //A CA certificate is a digital certificate issued by a certificate authority (CA), so SSL clients (such as web browsers) can use it to verify the SSL certificates sign by this CA.
-		// caCert, err := ioutil.ReadFile("../cert/cacerts.cer")
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
-		// caCertPool := x509.NewCertPool()
-		// caCertPool.AppendCertsFromPEM(caCert)
-
-		// Setup HTTPS client
-		config := &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			// RootCAs:            caCertPool,
-			// InsecureSkipVerify: false,
-			InsecureSkipVerify: true,
-		}
-		// config.BuildNameToCertificate()
-		cred := credentials.NewTLS(config)
-
-		// cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
-		// opts[0] = grpc.WithTransportCredentials(cred)
-		opts = append(opts, grpc.WithTransportCredentials(cred))
-	} else {
-		opts = append(opts, grpc.WithInsecure())
-	}
-
 	opts = append(opts, grpc.WithBlock())
 
-	conn, err := grpc.Dial(host, opts...)
+	log.Printf("Connect to server %s...\n", host)
+	// conn, err := grpc.Dial("127.0.0.1:"+host, opts...)
+	conn, err := grpc.Dial("localhost:"+host, opts...)
 	if err != nil {
 		log.Fatal("fail to dial:", err)
 	}
@@ -82,31 +43,105 @@ func grpcClient() {
 
 	log.Println("Connected to server", host)
 
-	client := pb.NewSocketConnectionClient(conn)
+	client := pb.NewDataBaseClient(conn)
+	fp := "419d3335b2b533526d4e7f6f1041b3c492d086cad0f5876739800ffd51659545"
+	h := "demo.ione.local"
 
-	stdreader := bufio.NewReader(os.Stdin)
-
-	for {
-		fmt.Print("c2s > ")
-		note, _ := stdreader.ReadString('\n')
-
-		// if err := stream.Send(&pb.StreamData{Message: note}); err != nil {
-		// 	lg.Fatal("Failed to send a note:", zap.Error(err))
-
-		// req, err := client.ScalarSendData(context.Background(), &pb.HttpReQuest2Loc{})
-		// if err != nil {
-		// 	log.Printf("could not SendData: %v", err)
-		// }
-		// log.Printf("Greeting c: %v", req.GetJson())
-
-		req, err := client.Add(context.Background(), &pb.HostFingerprint{Host: note, Fingerprint: note})
-		if err != nil {
-			log.Printf("could not SendData: %v", err)
-		}
-		log.Printf("Greeting c: %v", req.Sucsess)
+	hf := pb.HostFingerprint{
+		Host:        h,
+		Fingerprint: fp,
 	}
 
+	req, err := client.Add(context.Background(), &hf)
+	 //req, err := client.Edit(context.Background(), &hf)
+	// req, err := client.Delete(context.Background(), &hf)
+	if err != nil {
+		log.Printf("could not SendData: %v", err)
+	}
+	fmt.Println(req)
 }
+
+// func grpcClient() {
+
+// 	host := viper.GetString("TUNNEL_HOST")
+
+// 	var opts []grpc.DialOption
+// 	// opts = append(opts, grpc.WithInsecure())
+// 	// if viper.GetBool("SECURE") {
+// 	// 	cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+// 	// 	opts[0] = grpc.WithTransportCredentials(cred)
+// 	// }
+
+// 	if viper.GetBool("SECURE") {
+// 		// Load client cert
+// 		//cert, err := tls.LoadX509KeyPair("cert/0client.crt", "cert/0client.key")
+// 		cert, err := tls.LoadX509KeyPair("cert/1client.crt", "cert/1client.key")
+// 		if err != nil {
+// 			log.Fatal("fail to LoadX509KeyPair:", err)
+// 		}
+
+// 		// // Load CA cert
+// 		// //Certification authority, CA
+// 		// //A CA certificate is a digital certificate issued by a certificate authority (CA), so SSL clients (such as web browsers) can use it to verify the SSL certificates sign by this CA.
+// 		// caCert, err := ioutil.ReadFile("../cert/cacerts.cer")
+// 		// if err != nil {
+// 		// 	log.Fatal(err)
+// 		// }
+// 		// caCertPool := x509.NewCertPool()
+// 		// caCertPool.AppendCertsFromPEM(caCert)
+
+// 		// Setup HTTPS client
+// 		config := &tls.Config{
+// 			Certificates: []tls.Certificate{cert},
+// 			// RootCAs:            caCertPool,
+// 			// InsecureSkipVerify: false,
+// 			InsecureSkipVerify: true,
+// 		}
+// 		// config.BuildNameToCertificate()
+// 		cred := credentials.NewTLS(config)
+
+// 		// cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+// 		// opts[0] = grpc.WithTransportCredentials(cred)
+// 		opts = append(opts, grpc.WithTransportCredentials(cred))
+// 	} else {
+// 	}
+
+// 	opts = append(opts, grpc.WithInsecure())
+// 	opts = append(opts, grpc.WithBlock())
+
+// 	conn, err := grpc.Dial(host, opts...)
+// 	if err != nil {
+// 		log.Fatal("fail to dial:", err)
+// 	}
+// 	defer conn.Close()
+
+// 	log.Println("Connected to server", host)
+
+// 	client := pb.DataBaseClient()
+
+// 	stdreader := bufio.NewReader(os.Stdin)
+
+// 	for {
+// 		fmt.Print("c2s > ")
+// 		note, _ := stdreader.ReadString('\n')
+
+// 		// if err := stream.Send(&pb.StreamData{Message: note}); err != nil {
+// 		// 	lg.Fatal("Failed to send a note:", zap.Error(err))
+
+// 		// req, err := client.ScalarSendData(context.Background(), &pb.HttpReQuest2Loc{})
+// 		// if err != nil {
+// 		// 	log.Printf("could not SendData: %v", err)
+// 		// }
+// 		// log.Printf("Greeting c: %v", req.GetJson())
+
+// 		req, err := client.Add(context.Background(), &pb.HostFingerprint{Host: note, Fingerprint: note})
+// 		if err != nil {
+// 			log.Printf("could not SendData: %v", err)
+// 		}
+// 		log.Printf("Greeting c: %v", req.Sucsess)
+// 	}
+
+// }
 
 func restClient(url string, message string) {
 
@@ -166,7 +201,7 @@ func restClient(url string, message string) {
 	netClient.Transport.(*http.Transport).DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 		// if addr == "google.com:443" {
 		//     addr = "216.58.198.206:443"
-		addr = "localhost:80"//missing port in address
+		addr = "localhost:80" //missing port in address
 		// }
 		dialer := &net.Dialer{
 			Timeout:   30 * time.Second,
@@ -266,15 +301,17 @@ func restClient(url string, message string) {
 }
 
 func main() {
-	// grpcClient()
-	url := "https://httpbin.org/delay/9"
-	go restClient(url,"Send long get")
-	time.Sleep(1 * time.Second)
-	// <-time.After(3 * time.Second)
-	url1 := "https://httpbin.org/status/500"
-	restClient(url1,"Send short get")
+	bdgrpcClient()
+	// // grpcClient()
+	// url := "https://httpbin.org/delay/9"
+	// go restClient(url,"Send long get")
+	// time.Sleep(1 * time.Second)
+	// // <-time.After(3 * time.Second)
+	// url1 := "https://httpbin.org/status/500"
+	// restClient(url1,"Send short get")
 
-	time.Sleep(11 * time.Second)
+	// time.Sleep(11 * time.Second)
 
-	// httpJSONClient()
+	// // httpJSONClient()
+
 }
