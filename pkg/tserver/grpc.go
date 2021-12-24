@@ -86,8 +86,8 @@ func (s *TunnelServer) InitConnection(stream pb.SocketConnection_InitConnectionS
 	host, ok := s.fingerprints_hosts[hex_sert_raw]
 	if !ok {
 		cn := peer.AuthInfo.(credentials.TLSInfo).State.PeerCertificates[0].Subject.CommonName
-		log.Error("Strange clienf sert", zap.String("Fingerprint", hex_sert_raw), zap.String("CommonName", cn))
-		return errors.New("strange clienf sert:" + cn)
+		log.Error("Unregistered client Certificate", zap.String("Fingerprint", hex_sert_raw), zap.String("CommonName", cn))
+		return errors.New("Unregistered Certificate" + cn)
 	}
 
 	log.Info("Client connected", zap.String("Host", host))
