@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/arangodb/go-driver v1.2.1
-	github.com/slntopp/nocloud v0.0.0-20211227203700-0b097adfe329
+	github.com/slntopp/nocloud v0.0.0-20211227210000-5e512c99e63f
 	github.com/spf13/viper v1.10.1
 	go.uber.org/zap v1.19.1
 	google.golang.org/grpc v1.43.0
@@ -30,10 +30,12 @@ require (
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20210719221736-1c9a4c676720 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/rogpeppe/go-internal v1.6.1 // indirect
 	github.com/spf13/afero v1.7.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
