@@ -14,21 +14,12 @@ message httpReSp4Loc {
     fixed32 id = 2;
     bytes json = 3;
 }
-message HostFingerprint {
-    string fingerprint = 2;
-    string host = 1;
-}
-message HostFingerprintResp {
-    string message = 1;
-    bool sucsess =  2;
-}
 
 service SocketConnection {
     rpc InitConnection(stream httpReSp4Loc) returns (stream httpReQuest2Loc) {};
 }
 
-service DataBase {    
-    rpc Add(HostFingerprint) returns (HostFingerprintResp);
-    rpc Edit(HostFingerprint) returns (HostFingerprintResp);
-    rpc Delete(HostFingerprint) returns (HostFingerprintResp);
+message HostFingerprint {
+    string fingerprint = 2;
+    string host = 1;
 }

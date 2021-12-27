@@ -12,8 +12,9 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/structpb"
 
-	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
+	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"github.com/spf13/viper"
 )
 
@@ -43,22 +44,23 @@ func bdgrpcClient() {
 
 	log.Println("Connected to server", host)
 
-	client := pb.NewDataBaseClient(conn)
-	fp := "419d3335b2b533526d4e7f6f1041b3c492d086cad0f5876739800ffd51659545"
-	h := "demo.ione.local"
+	client := sppb.NewServicesProvidersExtentionsServiceClient(conn)
+	fp := structpb.NewStringValue("419d3335b2b533526d4e7f6f1041b3c492d086cad0f5876739800ffd51659545")
+	h := structpb.NewStringValue("demo.ione.local")
 
-	hf := pb.HostFingerprint{
-		Host:        h,
-		Fingerprint: fp,
+	data, _ := structpb.NewStruct(map[string]interface{}{"hostname": h, "fingerprint": fp})
+
+	req := sppb.ServicesProvidersExtentionData{
+		Uuid: "-", Data: data,
 	}
 
-	//req, err := client.Add(context.Background(), &hf)
-	 req, err := client.Edit(context.Background(), &hf)
-	// req, err := client.Delete(context.Background(), &hf)
+	//res, err := client.Register(context.Background(), &req)
+	res, err := client.Update(context.Background(), &req)
+	// res, err := client.Unregister(context.Background(), &req)
 	if err != nil {
 		log.Printf("could not SendData: %v", err)
 	}
-	fmt.Println(req)
+	fmt.Println(res)
 }
 
 // func grpcClient() {

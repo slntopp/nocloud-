@@ -8,16 +8,19 @@ import (
 	"net"
 
 	driver "github.com/arangodb/go-driver"
-	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
+	tpb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
+	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const HOSTS_COLLECTION = "TunnelHosts"
 
 type DBServerAPI struct {
-	pb.UnimplementedDataBaseServer
+	pb.UnimplementedServicesProvidersExtentionsServiceServer
 	*TunnelServer
 }
 
@@ -95,101 +98,118 @@ func (s *TunnelServer) LoadHostFingerprintsFromDB() {
 	s.mutex.Unlock()
 }
 
+func (s *DBServerAPI) GetType(ctx context.Context, req *pb.GetTypeRequest) (*pb.GetTypeResponse, error) {
+	return &pb.GetTypeResponse{Type: "nocloud-tunnelmesh"}, nil
+}
+
+func (s *DBServerAPI) Test(ctx context.Context, req *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
+	return &pb.GenericResponse{Result: true}, nil
+}
+
 //Add host/Fingerprint to DB
-func (s *DBServerAPI) Add(ctx context.Context, in *pb.HostFingerprint) (*pb.HostFingerprintResp, error) {
-	log := s.log.Named("AddFingerprintsToDB")
+func (s *DBServerAPI) Register(ctx context.Context, in *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
+	log := s.log.Named("Register")
+
+	data := in.Data.AsMap()
+	hostname    := data["hostname"].(string)
+	fingerprint := data["fingerprint"].(string)
 
 	for k, v := range s.fingerprints_hosts {
-		if k == in.Fingerprint {
-			return &pb.HostFingerprintResp{Message: in.Fingerprint + " exists!", Sucsess: false}, nil
-		} else if v == in.Host {
-			return &pb.HostFingerprintResp{Message: in.Host + " exists!", Sucsess: false}, nil
+		if k == fingerprint {
+			return &pb.GenericResponse{Result: false, Error: "Fingerprint exists"}, nil
+		} else if v == hostname {
+			return &pb.GenericResponse{Result: false, Error: "Hostname already registered"}, nil
 		}
 	}
 
 	doc := HostsFingerprintsPair{
-		Fingerprint: in.Fingerprint,
-		Host:        in.Host,
+		fingerprint, hostname,
 	}
 
 	meta, err := s.col.CreateDocument(context.Background(), doc)
 	if err != nil {
-		log.Error("CreateDocument", zap.Error(err))
-		return &pb.HostFingerprintResp{Message: in.Host + "CreateDocument error", Sucsess: false}, err
+		log.Error("Error Creating Document", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error Creating Document")
 	}
-	log.Info("Got doc with key from query", zap.String("key", meta.Key))
+	log.Debug("Got doc with key from query", zap.String("key", meta.Key))
 
 	s.LoadHostFingerprintsFromDB()
 	// s.resetConn(in)
 
-	return &pb.HostFingerprintResp{Message: in.Host + " added", Sucsess: true}, nil
+	return &pb.GenericResponse{Result: true}, nil
 }
 
 //Edit host/Fingerprint to DB
-func (s *DBServerAPI) Edit(ctx context.Context, in *pb.HostFingerprint) (*pb.HostFingerprintResp, error) {
-	log := s.log.Named("EditFingerprintsToDB")
+func (s *DBServerAPI) Update(ctx context.Context, in *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
+	log := s.log.Named("Update")
 
-	old_host, ok := s.fingerprints_hosts[in.Fingerprint]
+	data := in.Data.AsMap()
+	hostname    := data["hostname"].(string)
+	fingerprint := data["fingerprint"].(string)
+
+	old_host, ok := s.fingerprints_hosts[fingerprint]
 	if !ok {
-		return &pb.HostFingerprintResp{Message: in.Host + " not exist!", Sucsess: false}, nil
+		return &pb.GenericResponse{Result: false, Error: "Hostname isn't registered"}, nil
 	}
 
 	for k, v := range s.fingerprints_hosts {
-		if v == in.Host && k != in.Fingerprint {
-			return &pb.HostFingerprintResp{Message: in.Host + " exists!", Sucsess: false}, nil
+		if v == hostname && k != fingerprint {
+			return &pb.GenericResponse{Result: false, Error: "Hostname already registered"}, nil
 		}
 	}
 
 	patch := map[string]interface{}{
-		"host": in.Host,
+		"host": hostname,
 	}
 
-	meta, err := s.col.UpdateDocument(context.Background(), in.Fingerprint, patch)
+	meta, err := s.col.UpdateDocument(context.Background(), fingerprint, patch)
 	if err != nil {
-		log.Error("UpdateDocument", zap.Error(err))
-		return &pb.HostFingerprintResp{Message: in.Host + "UpdateDocument error", Sucsess: false}, err
+		log.Error("Error Updating Document", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error Updating Document")
 	}
 
 	log.Info("Edit doc with key from query", zap.String("key", meta.Key))
 
 	s.LoadHostFingerprintsFromDB()
 
-	in = &pb.HostFingerprint{
-		Fingerprint: in.Fingerprint,
+	req := &tpb.HostFingerprint{
+		Fingerprint: fingerprint,
 		Host:        old_host,
 	}
-	s.resetConn(in)
+	s.resetConn(req)
 
-	return &pb.HostFingerprintResp{Message: in.Host + " edited", Sucsess: true}, nil
+	return &pb.GenericResponse{Result: true}, nil
 }
 
 //Delete host/Fingerprint to DB
-func (s *DBServerAPI) Delete(ctx context.Context, in *pb.HostFingerprint) (*pb.HostFingerprintResp, error) {
-	log := s.log.Named("DeleteFingerprintsToDB")
+func (s *DBServerAPI) Unregister(ctx context.Context, in *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
+	log := s.log.Named("Unregister")
 
-	old_host, ok := s.fingerprints_hosts[in.Fingerprint]
+	data := in.Data.AsMap()
+	fingerprint := data["fingerprint"].(string)
+
+	old_host, ok := s.fingerprints_hosts[fingerprint]
 	if !ok {
-		return &pb.HostFingerprintResp{Message: in.Host + " not exist!", Sucsess: false}, nil
+		return &pb.GenericResponse{Result: false, Error: "Hostname isn't registered"}, nil
 	}
 
-	meta, err := s.col.RemoveDocument(context.Background(), in.Fingerprint)
+	meta, err := s.col.RemoveDocument(context.Background(), fingerprint)
 	if err != nil {
-		log.Error("RemoveDocument", zap.Error(err))
-		return &pb.HostFingerprintResp{Message: in.Host + "RemoveDocument error", Sucsess: false}, err
+		log.Error("Error Removing Document", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error Removing Document")
 	}
 
 	log.Info("Remove doc with key from query", zap.String("key", meta.Key))
 
 	s.LoadHostFingerprintsFromDB()
 	
-	in = &pb.HostFingerprint{
-		Fingerprint: in.Fingerprint,
+	req := &tpb.HostFingerprint{
+		Fingerprint: fingerprint,
 		Host:        old_host,
 	}
-	s.resetConn(in)
+	s.resetConn(req)
 
-
-	return &pb.HostFingerprintResp{Message: in.Host + " deleted", Sucsess: true}, nil
+	return &pb.GenericResponse{Result: true}, nil
 }
 
 //Start grpc server to update fingerprint-host database
@@ -205,7 +225,7 @@ func (s *TunnelServer) StartDBgRPCServer() *grpc.Server {
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 
-	pb.RegisterDataBaseServer(grpcServer, &DBServerAPI{TunnelServer: s})
+	pb.RegisterServicesProvidersExtentionsServiceServer(grpcServer, &DBServerAPI{TunnelServer: s})
 
 	go func() {
 		log.Info("Start DataBase gRPCServer Listening on 0.0.0.0:", zap.String("port", port), zap.Skip())
