@@ -52,8 +52,8 @@ func bdgrpcClient() {
 		Fingerprint: fp,
 	}
 
-	req, err := client.Add(context.Background(), &hf)
-	 //req, err := client.Edit(context.Background(), &hf)
+	//req, err := client.Add(context.Background(), &hf)
+	 req, err := client.Edit(context.Background(), &hf)
 	// req, err := client.Delete(context.Background(), &hf)
 	if err != nil {
 		log.Printf("could not SendData: %v", err)

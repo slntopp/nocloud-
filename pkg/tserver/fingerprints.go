@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"net"
 
@@ -90,7 +89,7 @@ func (s *TunnelServer) LoadHostFingerprintsFromDB() {
 
 		s.fingerprints_hosts[doc.Fingerprint] = doc.Host
 
-		log.Info("Got doc with key from query", zap.String("key", meta.Key))
+		log.Info("Load HostFingerprints From DB", zap.String("key", meta.Key))
 	}
 
 	s.mutex.Unlock()
@@ -100,9 +99,12 @@ func (s *TunnelServer) LoadHostFingerprintsFromDB() {
 func (s *DBServerAPI) Add(ctx context.Context, in *pb.HostFingerprint) (*pb.HostFingerprintResp, error) {
 	log := s.log.Named("AddFingerprintsToDB")
 
-	_, ok := s.fingerprints_hosts[in.Fingerprint]
-	if ok {
-		return &pb.HostFingerprintResp{Message: in.Host + " exists!", Sucsess: false}, errors.New("this fingerprint already in DB")
+	for k, v := range s.fingerprints_hosts {
+		if k == in.Fingerprint {
+			return &pb.HostFingerprintResp{Message: in.Fingerprint + " exists!", Sucsess: false}, nil
+		} else if v == in.Host {
+			return &pb.HostFingerprintResp{Message: in.Host + " exists!", Sucsess: false}, nil
+		}
 	}
 
 	doc := HostsFingerprintsPair{
@@ -118,6 +120,7 @@ func (s *DBServerAPI) Add(ctx context.Context, in *pb.HostFingerprint) (*pb.Host
 	log.Info("Got doc with key from query", zap.String("key", meta.Key))
 
 	s.LoadHostFingerprintsFromDB()
+	// s.resetConn(in)
 
 	return &pb.HostFingerprintResp{Message: in.Host + " added", Sucsess: true}, nil
 }
@@ -126,9 +129,15 @@ func (s *DBServerAPI) Add(ctx context.Context, in *pb.HostFingerprint) (*pb.Host
 func (s *DBServerAPI) Edit(ctx context.Context, in *pb.HostFingerprint) (*pb.HostFingerprintResp, error) {
 	log := s.log.Named("EditFingerprintsToDB")
 
-	_, ok := s.fingerprints_hosts[in.Fingerprint]
+	old_host, ok := s.fingerprints_hosts[in.Fingerprint]
 	if !ok {
 		return &pb.HostFingerprintResp{Message: in.Host + " not exist!", Sucsess: false}, nil
+	}
+
+	for k, v := range s.fingerprints_hosts {
+		if v == in.Host && k != in.Fingerprint {
+			return &pb.HostFingerprintResp{Message: in.Host + " exists!", Sucsess: false}, nil
+		}
 	}
 
 	patch := map[string]interface{}{
@@ -145,6 +154,12 @@ func (s *DBServerAPI) Edit(ctx context.Context, in *pb.HostFingerprint) (*pb.Hos
 
 	s.LoadHostFingerprintsFromDB()
 
+	in = &pb.HostFingerprint{
+		Fingerprint: in.Fingerprint,
+		Host:        old_host,
+	}
+	s.resetConn(in)
+
 	return &pb.HostFingerprintResp{Message: in.Host + " edited", Sucsess: true}, nil
 }
 
@@ -152,7 +167,7 @@ func (s *DBServerAPI) Edit(ctx context.Context, in *pb.HostFingerprint) (*pb.Hos
 func (s *DBServerAPI) Delete(ctx context.Context, in *pb.HostFingerprint) (*pb.HostFingerprintResp, error) {
 	log := s.log.Named("DeleteFingerprintsToDB")
 
-	_, ok := s.fingerprints_hosts[in.Fingerprint]
+	old_host, ok := s.fingerprints_hosts[in.Fingerprint]
 	if !ok {
 		return &pb.HostFingerprintResp{Message: in.Host + " not exist!", Sucsess: false}, nil
 	}
@@ -166,8 +181,13 @@ func (s *DBServerAPI) Delete(ctx context.Context, in *pb.HostFingerprint) (*pb.H
 	log.Info("Remove doc with key from query", zap.String("key", meta.Key))
 
 	s.LoadHostFingerprintsFromDB()
+	
+	in = &pb.HostFingerprint{
+		Fingerprint: in.Fingerprint,
+		Host:        old_host,
+	}
+	s.resetConn(in)
 
-	//TODO close connection for deleted host
 
 	return &pb.HostFingerprintResp{Message: in.Host + " deleted", Sucsess: true}, nil
 }

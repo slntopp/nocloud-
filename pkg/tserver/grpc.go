@@ -16,8 +16,9 @@ import (
 
 //Keeps all connections from clients (hosts) and ctx.WithCancel cut all http-requests if connection lost
 type tunnelHost struct {
-	ctx    context.Context
-	stream pb.SocketConnection_InitConnectionServer
+	ctx       context.Context
+	stream    pb.SocketConnection_InitConnectionServer
+	resetConn chan (error)
 }
 
 //struct for GRPC interface SocketConnectionServer and exchange data between methods
@@ -36,7 +37,7 @@ type TunnelServer struct {
 //Initialize new struct for GRPC interface
 func NewTunnelServer(log *zap.Logger, db driver.Database) *TunnelServer {
 	col, _ := db.Collection(context.TODO(), HOSTS_COLLECTION)
-	est := true//todo &true not work
+	est := true //todo &true not work
 	col.EnsureFullTextIndex(context.TODO(), []string{"host"}, &driver.EnsureFullTextIndexOptions{
 		MinLength:    2,
 		InBackground: true,
@@ -55,9 +56,19 @@ func NewTunnelServer(log *zap.Logger, db driver.Database) *TunnelServer {
 	}
 }
 
-//Send data to client by grpc
-func (s *TunnelServer) ScalarSendData(context.Context, *pb.HttpReQuest2Loc) (*pb.HttpReSp4Loc, error) {
-	return &pb.HttpReSp4Loc{}, nil
+//Reset connections if his fp/hosts edit/remove in db
+func (s *TunnelServer) resetConn(in *pb.HostFingerprint) {
+	log := s.log.Named("Edition in DB")
+
+	_, ok := s.hosts[in.Host]
+	if ok {
+		s.mutex.Lock()
+		s.hosts[in.Host].resetConn <- nil
+		s.mutex.Unlock()
+
+		log.Info("Connection closed by DB edition", zap.String("Host", in.Host))
+	}
+
 }
 
 //Initiate soket connection from Location
@@ -79,34 +90,46 @@ func (s *TunnelServer) InitConnection(stream pb.SocketConnection_InitConnectionS
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s.mutex.Lock()
-	s.hosts[host] = tunnelHost{ctx, stream}
+	s.hosts[host] = tunnelHost{ctx, stream, make(chan error)}
 	s.mutex.Unlock()
+
 	defer func() {
+		cancel()
 		s.mutex.Lock()
 		delete(s.hosts, host)
 		s.mutex.Unlock()
 	}()
 
-	for {
-		//receive json from location
-		in, err := stream.Recv()
-		if err != nil {
-			if err == io.EOF {
-				log.Error("Stream connection lost", zap.String("Host", host))
-			} else {
-				log.Error("stream.Recv",  zap.Error(err))
+	go func() {
+		var errtmp error
+		for {
+			//receive json from location
+			in, err := stream.Recv()
+			if err != nil {
+				if err == io.EOF {
+					log.Error("Stream connection lost", zap.String("Host", host))
+				} else {
+					log.Error("stream.Recv", zap.String("Host", host), zap.Error(err))
+				}
+				// s.hosts[host].resetConn <- err //if client disconnected: panic: runtime error: invalid memory address or nil pointer dereference
+				errtmp = err
+				break
 			}
-			cancel()
-			return err
+
+			rid, ok := s.request_id[in.Id]
+			if !ok {
+				log.Error("Request does not exist", zap.String("Host", host))
+				continue
+			}
+			rid <- in.Json
+
+			log.Info("Received data from:", zap.String("Host", host))
 		}
 
-		rid, ok := s.request_id[in.Id]
-		if !ok {
-			log.Error("Request does not exist", zap.String("Host", host))
-			continue
-		}
-		rid <- in.Json
+		s.hosts[host].resetConn <- errtmp
+	}()
 
-		log.Info("Received data from:", zap.String("Host", host))
-	}
+	err1 := <-s.hosts[host].resetConn
+	log.Info("Connection closed", zap.String("Host", host), zap.Error(err1))
+	return err1
 }

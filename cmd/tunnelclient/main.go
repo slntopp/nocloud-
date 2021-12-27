@@ -13,14 +13,15 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
 	log *zap.Logger
 
-	host             string
-	secure           bool
-	dest 			string
+	host   string
+	secure bool
+	dest   string
 )
 
 func init() {
@@ -39,7 +40,7 @@ func init() {
 
 func main() {
 	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
+	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if secure {
 		// Load client cert
 		cert, err := tls.LoadX509KeyPair("/cert/client.crt", "/cert/client.key")
@@ -92,12 +93,12 @@ func main() {
 			for {
 				in, err := stream.Recv()
 				if err == io.EOF {
-					log.Info("Connection closed", zap.String("Message", in.Message), zap.Skip())
-					return
+					log.Info("Connection closed", zap.Error(err))
+					break
 				}
 				if err != nil {
 					log.Error("Failed to receive a note:", zap.Error(err))
-					return
+					break
 				}
 
 				log.Debug("Received request from server:", zap.String("Message", in.Message), zap.Skip())
