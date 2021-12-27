@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 
@@ -102,7 +103,31 @@ func (s *DBServerAPI) GetType(ctx context.Context, req *pb.GetTypeRequest) (*pb.
 	return &pb.GetTypeResponse{Type: "nocloud-tunnelmesh"}, nil
 }
 
+func ExtractDataFromExtData(req *pb.ServicesProvidersExtentionData) (hostname string, fingerprint string, err error) {
+	data := req.Data.AsMap()
+	if _, ok := data["hostname"]; !ok {
+		return "", "", errors.New("Hostname not given(key: hostname)")
+	}
+	if _, ok := data["fingerprint"]; !ok {
+		return "", "", errors.New("Fingerprint not given(key: fingerprint)")
+	}
+	hostname    = data["hostname"].(string)
+	fingerprint = data["fingerprint"].(string)
+	return hostname, fingerprint, nil
+}
+
 func (s *DBServerAPI) Test(ctx context.Context, req *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
+	hostname, fingerprint, err := ExtractDataFromExtData(req)
+	if err != nil {
+		return &pb.GenericResponse{Result: false, Error: err.Error()}, nil
+	}
+	for k, v := range s.fingerprints_hosts {
+		if k == fingerprint {
+			return &pb.GenericResponse{Result: false, Error: "Fingerprint exists"}, nil
+		} else if v == hostname {
+			return &pb.GenericResponse{Result: false, Error: "Hostname already registered"}, nil
+		}
+	}
 	return &pb.GenericResponse{Result: true}, nil
 }
 
@@ -110,10 +135,10 @@ func (s *DBServerAPI) Test(ctx context.Context, req *pb.ServicesProvidersExtenti
 func (s *DBServerAPI) Register(ctx context.Context, in *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
 	log := s.log.Named("Register")
 
-	data := in.Data.AsMap()
-	hostname    := data["hostname"].(string)
-	fingerprint := data["fingerprint"].(string)
-
+	hostname, fingerprint, err := ExtractDataFromExtData(in)
+	if err != nil {
+		return &pb.GenericResponse{Result: false, Error: err.Error()}, nil
+	}
 	for k, v := range s.fingerprints_hosts {
 		if k == fingerprint {
 			return &pb.GenericResponse{Result: false, Error: "Fingerprint exists"}, nil
@@ -143,9 +168,10 @@ func (s *DBServerAPI) Register(ctx context.Context, in *pb.ServicesProvidersExte
 func (s *DBServerAPI) Update(ctx context.Context, in *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
 	log := s.log.Named("Update")
 
-	data := in.Data.AsMap()
-	hostname    := data["hostname"].(string)
-	fingerprint := data["fingerprint"].(string)
+	hostname, fingerprint, err := ExtractDataFromExtData(in)
+	if err != nil {
+		return &pb.GenericResponse{Result: false, Error: err.Error()}, nil
+	}
 
 	old_host, ok := s.fingerprints_hosts[fingerprint]
 	if !ok {
@@ -185,8 +211,10 @@ func (s *DBServerAPI) Update(ctx context.Context, in *pb.ServicesProvidersExtent
 func (s *DBServerAPI) Unregister(ctx context.Context, in *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
 	log := s.log.Named("Unregister")
 
-	data := in.Data.AsMap()
-	fingerprint := data["fingerprint"].(string)
+	_, fingerprint, err := ExtractDataFromExtData(in)
+	if err != nil {
+		return &pb.GenericResponse{Result: false, Error: err.Error()}, nil
+	}
 
 	old_host, ok := s.fingerprints_hosts[fingerprint]
 	if !ok {
