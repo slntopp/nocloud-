@@ -160,7 +160,10 @@ func (s *DBServerAPI) Register(ctx context.Context, in *pb.ServicesProvidersExte
 
 	s.LoadHostFingerprintsFromDB()
 	// s.resetConn(in)
-
+	err = s.WaitForConnection(hostname)
+	if err != nil {
+		return &pb.GenericResponse{Result: false, Error: err.Error()}, nil
+	}
 	return &pb.GenericResponse{Result: true}, nil
 }
 
