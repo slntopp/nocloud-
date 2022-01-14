@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
@@ -69,6 +70,25 @@ func (s *TunnelServer) resetConn(in *pb.HostFingerprint) {
 		log.Info("Connection closed by DB edition", zap.String("Host", in.Host))
 	}
 
+}
+
+func (s *TunnelServer) WaitForConnection(host string) error {
+	r := make(chan bool, 1)
+	go func() {
+		for {
+			time.Sleep(time.Second)
+			_, ok := s.hosts[host]
+			if ok {
+				r <- true
+			}
+		}
+	}()
+	select {
+    case <- r:
+        return nil
+    case <- time.After(30 * time.Second):
+        return errors.New("Connection timeout exceeded")
+    }
 }
 
 //Initiate soket connection from Location
