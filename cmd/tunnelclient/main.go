@@ -71,7 +71,7 @@ func main() {
 	var kacp = keepalive.ClientParameters{
 		Time:                time.Duration(keepalive_ping) * time.Second,    // send pings every keepalive_ping seconds if there is no activity
 		Timeout:             time.Duration(keepalive_timeout) * time.Second, // wait timeout second for ping back
-		PermitWithoutStream: false,                                          // send pings even without active streams
+		PermitWithoutStream: true,                                          // send pings even without active streams
 	}
 
 	opts = append(opts, grpc.WithKeepaliveParams(kacp))

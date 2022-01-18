@@ -86,7 +86,7 @@ func main() {
 
 	var kaep = keepalive.EnforcementPolicy{
 		MinTime:             time.Duration(keepalive_ping*2) * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
-		PermitWithoutStream: false,                                         // Allow pings even when there are no active streams           // send pings even without active streams
+		PermitWithoutStream: true,                                         // Allow pings even when there are no active streams           // send pings even without active streams
 	}
 
 	opts = append(opts, grpc.KeepaliveEnforcementPolicy(kaep))
