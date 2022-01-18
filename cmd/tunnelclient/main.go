@@ -66,9 +66,9 @@ func main() {
 		// cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
 		opts[0] = grpc.WithTransportCredentials(cred)
 	}
-	
+
 	var kacp = keepalive.ClientParameters{
-		Time:                time.Duration(keepalive_ping) * time.Second,    // send pings every 10 seconds if there is no activity
+		Time:                time.Duration(keepalive_ping) * time.Second,    // send pings every keepalive_ping seconds if there is no activity
 		Timeout:             time.Duration(keepalive_timeout) * time.Second, // wait timeout second for ping back
 		PermitWithoutStream: true,                                           // send pings even without active streams
 	}
