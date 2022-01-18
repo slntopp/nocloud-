@@ -14,14 +14,17 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 )
 
 var (
 	log *zap.Logger
 
-	host   string
-	secure bool
-	dest   string
+	host              string
+	secure            bool
+	dest              string
+	keepalive_ping    int
+	keepalive_timeout int
 )
 
 func init() {
@@ -32,10 +35,14 @@ func init() {
 	viper.SetDefault("TUNNEL_HOST", "localhost:8080")
 	viper.SetDefault("DESTINATION_HOST", "ione")
 	viper.SetDefault("SECURE", true)
+	viper.SetDefault("KEEPALIVE_PINGS_EVERY", "10")
+	viper.SetDefault("KEEPALIVE_TIMEOUT", "20")
 
 	host = viper.GetString("TUNNEL_HOST")
 	secure = viper.GetBool("SECURE")
 	dest = viper.GetString("DESTINATION_HOST")
+	keepalive_ping = viper.GetInt("KEEPALIVE_PINGS_EVERY")
+	keepalive_timeout = viper.GetInt("KEEPALIVE_TIMEOUT")
 }
 
 func main() {
@@ -59,7 +66,14 @@ func main() {
 		// cred := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
 		opts[0] = grpc.WithTransportCredentials(cred)
 	}
+	
+	var kacp = keepalive.ClientParameters{
+		Time:                time.Duration(keepalive_ping) * time.Second,    // send pings every 10 seconds if there is no activity
+		Timeout:             time.Duration(keepalive_timeout) * time.Second, // wait timeout second for ping back
+		PermitWithoutStream: true,                                           // send pings even without active streams
+	}
 
+	opts = append(opts, grpc.WithKeepaliveParams(kacp))
 	opts = append(opts, grpc.WithBlock())
 
 	//Reconnection
@@ -74,6 +88,7 @@ func main() {
 			defer cancel()
 
 			conn, err := grpc.DialContext(ctx, host, opts...)
+
 			if err != nil {
 				log.Error("fail to dial:", zap.Error(err))
 				return
