@@ -85,16 +85,16 @@ func main() {
 	cred := credentials.NewTLS(config)
 
 	var kaep = keepalive.EnforcementPolicy{
-		MinTime:             5 * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
+		MinTime:             time.Duration(keepalive_ping* 2) * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
 		PermitWithoutStream: true,            // Allow pings even when there are no active streams           // send pings even without active streams
 	}
 
 	opts = append(opts, grpc.KeepaliveEnforcementPolicy(kaep))
 
 	var kasp = keepalive.ServerParameters{
-		MaxConnectionIdle:     15 * time.Second, // If a client is idle for 15 seconds, send a GOAWAY
-		MaxConnectionAge:      30 * time.Second, // If any connection is alive for more than 30 seconds, send a GOAWAY
-		MaxConnectionAgeGrace: 5 * time.Second,  // Allow 5 seconds for pending RPCs to complete before forcibly closing connections
+		MaxConnectionIdle:     3600 * time.Second, // If a client is idle for 15 seconds, send a GOAWAY
+		MaxConnectionAge:      7200 * time.Second, // If any connection is alive for more than 30 seconds, send a GOAWAY
+		MaxConnectionAgeGrace: 15 * time.Second,  // Allow 5 seconds for pending RPCs to complete before forcibly closing connections
 		Time:    time.Duration(keepalive_ping) * time.Second,    // send pings every keepalive_ping seconds if there is no activity
 		Timeout: time.Duration(keepalive_timeout) * time.Second, // wait timeout second for ping back
 	}
