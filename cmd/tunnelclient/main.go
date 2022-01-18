@@ -36,7 +36,7 @@ func init() {
 	viper.SetDefault("DESTINATION_HOST", "ione")
 	viper.SetDefault("SECURE", true)
 	viper.SetDefault("KEEPALIVE_PINGS_EVERY", "10")
-	viper.SetDefault("KEEPALIVE_TIMEOUT", "20")
+	viper.SetDefault("KEEPALIVE_TIMEOUT", "1")
 
 	host = viper.GetString("TUNNEL_HOST")
 	secure = viper.GetBool("SECURE")

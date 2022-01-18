@@ -36,8 +36,8 @@ func init() {
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("GRPC_PORT", "8080")
 	viper.SetDefault("DB_GRPC_PORT", "8000")
-	viper.SetDefault("KEEPALIVE_PINGS_EVERY", "10")
-	viper.SetDefault("KEEPALIVE_TIMEOUT", "20")
+	viper.SetDefault("KEEPALIVE_PINGS_EVERY", "5")
+	viper.SetDefault("KEEPALIVE_TIMEOUT", "1")
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
