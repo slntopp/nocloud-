@@ -35,8 +35,8 @@ func init() {
 	viper.SetDefault("TUNNEL_HOST", "localhost:8080")
 	viper.SetDefault("DESTINATION_HOST", "ione")
 	viper.SetDefault("SECURE", true)
-	viper.SetDefault("KEEPALIVE_PINGS_EVERY", "10")
-	viper.SetDefault("KEEPALIVE_TIMEOUT", "1")
+	viper.SetDefault("KEEPALIVE_PINGS_EVERY", "10") //should be largest than EnforcementPolicy on server
+	viper.SetDefault("KEEPALIVE_TIMEOUT", "2")
 
 	host = viper.GetString("TUNNEL_HOST")
 	secure = viper.GetBool("SECURE")
@@ -67,10 +67,11 @@ func main() {
 		opts[0] = grpc.WithTransportCredentials(cred)
 	}
 
+	//keepalive_ping client should be more
 	var kacp = keepalive.ClientParameters{
 		Time:                time.Duration(keepalive_ping) * time.Second,    // send pings every keepalive_ping seconds if there is no activity
 		Timeout:             time.Duration(keepalive_timeout) * time.Second, // wait timeout second for ping back
-		PermitWithoutStream: true,                                           // send pings even without active streams
+		PermitWithoutStream: false,                                          // send pings even without active streams
 	}
 
 	opts = append(opts, grpc.WithKeepaliveParams(kacp))
