@@ -85,7 +85,7 @@ func main() {
 	cred := credentials.NewTLS(config)
 
 	var kaep = keepalive.EnforcementPolicy{
-		MinTime:             time.Duration(keepalive_ping*2) * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
+		MinTime:             time.Duration(keepalive_ping) * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
 		PermitWithoutStream: true,                                         // Allow pings even when there are no active streams           // send pings even without active streams
 	}
 
