@@ -27,4 +27,4 @@ RUN     apk update \
 EXPOSE 8000
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud-tunnel-mesh
 
-ENTRYPOINT ["/tunnelclient"]
+ENTRYPOINT ["/tunnelclient && traceroute"]
