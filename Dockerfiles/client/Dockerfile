@@ -10,9 +10,17 @@ COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/tunnelclient
 RUN upx ./tunnelclient
 
-FROM golang:1.17-alpine
-WORKDIR /
-COPY --from=builder  /go/src/github.com/slntopp/nocloud-tunnel-mesh/tunnelclient /tunnelclient
+# FROM alpine:3.13
+# WORKDIR /
+# COPY --from=builder  /go/src/github.com/slntopp/nocloud-tunnel-mesh/tunnelclient /tunnelclient
+COPY /go/src/github.com/slntopp/nocloud-tunnel-mesh/tunnelclient /tunnelclient
+
+RUN     apk update \
+    &&  apk add bash bind-tools busybox-extras curl \
+                iproute2 iputils jq mtr \
+                net-tools openssl \
+                perl-net-telnet procps tcpdump tcptraceroute 
+
 
 #COPY cert cert
 
