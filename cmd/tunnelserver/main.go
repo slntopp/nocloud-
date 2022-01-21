@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
+	"time"
 
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/tserver"
@@ -13,14 +14,17 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 )
 
 var (
 	port string
 	log  *zap.Logger
 
-	arangodbHost string
-	arangodbCred string
+	arangodbHost   string
+	arangodbCred   string
+	keepalive_ping int
+	// keepalive_timeout int
 )
 
 func init() {
@@ -32,10 +36,14 @@ func init() {
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("GRPC_PORT", "8080")
 	viper.SetDefault("DB_GRPC_PORT", "8000")
+	viper.SetDefault("KEEPALIVE_PINGS_EVERY", "5")
+	// viper.SetDefault("KEEPALIVE_TIMEOUT", "2")
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
 	port = viper.GetString("GRPC_PORT")
+	keepalive_ping = viper.GetInt("KEEPALIVE_PINGS_EVERY")
+	// keepalive_timeout = viper.GetInt("KEEPALIVE_TIMEOUT")
 }
 
 func main() {
@@ -77,6 +85,21 @@ func main() {
 	cred := credentials.NewTLS(config)
 
 	opts = append(opts, grpc.Creds(cred))
+
+	var kaep = keepalive.EnforcementPolicy{
+		MinTime:             time.Duration(keepalive_ping) * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
+		PermitWithoutStream: true,                                        // Allow pings even when there are no active streams           // send pings even without active streams
+	}
+	opts = append(opts, grpc.KeepaliveEnforcementPolicy(kaep))
+
+	// var kasp = keepalive.ServerParameters{
+	// 	MaxConnectionIdle:     0,                                              // 15 * time.Second, // If a client is idle for 15 seconds, send a GOAWAY
+	// 	MaxConnectionAge:      0,                                              //30 * time.Second, // If any connection is alive for more than 30 seconds, send a GOAWAY
+	// 	MaxConnectionAgeGrace: 0,                                              //15 * time.Second,  // Allow 5 seconds for pending RPCs to complete before forcibly closing connections
+	// 	Time:                  time.Duration(keepalive_ping) * time.Second,    // send pings every keepalive_ping seconds if there is no activity
+	// 	Timeout:               time.Duration(keepalive_timeout) * time.Second, // wait timeout second for ping back
+	// }
+	// opts = append(opts, grpc.KeepaliveParams(kasp))
 
 	grpcServer := grpc.NewServer(opts...)
 	server := tserver.NewTunnelServer(log, db)
