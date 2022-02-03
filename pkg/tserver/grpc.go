@@ -102,7 +102,7 @@ func (s *TunnelServer) InitConnection(stream pb.SocketConnection_InitConnectionS
 	if !ok {
 		cn := peer.AuthInfo.(credentials.TLSInfo).State.PeerCertificates[0].Subject.CommonName
 		log.Error("Unregistered client Certificate", zap.String("Fingerprint", hex_sert_raw), zap.String("CommonName", cn))
-		return errors.New("Unregistered Certificate" + cn)
+		return errors.New("Unregistered Certificate: " + cn)
 	}
 
 	log.Info("Client connected", zap.String("Host", host))
