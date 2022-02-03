@@ -103,6 +103,21 @@ func main() {
 
 	opts = append(opts, grpc.Creds(cred))
 
+	kaep = keepalive.EnforcementPolicy{
+		MinTime:             time.Duration(keepalive_ping) * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
+		PermitWithoutStream: true,                                        // Allow pings even when there are no active streams           // send pings even without active streams
+	}
+	opts = append(opts, grpc.KeepaliveEnforcementPolicy(kaep))
+
+	// var kasp = keepalive.ServerParameters{
+	// 	MaxConnectionIdle:     0,                                              // 15 * time.Second, // If a client is idle for 15 seconds, send a GOAWAY
+	// 	MaxConnectionAge:      0,                                              //30 * time.Second, // If any connection is alive for more than 30 seconds, send a GOAWAY
+	// 	MaxConnectionAgeGrace: 0,                                              //15 * time.Second,  // Allow 5 seconds for pending RPCs to complete before forcibly closing connections
+	// 	Time:                  time.Duration(keepalive_ping) * time.Second,    // send pings every keepalive_ping seconds if there is no activity
+	// 	Timeout:               time.Duration(keepalive_timeout) * time.Second, // wait timeout second for ping back
+	// }
+	// opts = append(opts, grpc.KeepaliveParams(kasp))
+
 	grpcServer := grpc.NewServer(opts...)
 	server := tserver.NewTunnelServer(log, db)
 	server.LoadHostFingerprintsFromDB()

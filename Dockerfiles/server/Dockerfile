@@ -16,7 +16,9 @@ COPY --from=builder  /go/src/github.com/slntopp/nocloud-tunnel-mesh/tunnelserver
 
 #COPY cert cert
 
+EXPOSE 8080
 EXPOSE 8000
+EXPOSE 80
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud-tunnel-mesh
 
 ENTRYPOINT ["/tunnelserver"]

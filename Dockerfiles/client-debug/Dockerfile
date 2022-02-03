@@ -13,9 +13,8 @@ RUN upx ./tunnelclient
 FROM alpine:3.13
 WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud-tunnel-mesh/tunnelclient /tunnelclient
-# COPY /go/src/github.com/slntopp/nocloud-tunnel-mesh/tunnelclient /tunnelclient
 
-RUN     apk update \
+RUN apk update \
     &&  apk add bash bind-tools busybox-extras curl \
                 iproute2 iputils jq mtr \
                 net-tools openssl \
