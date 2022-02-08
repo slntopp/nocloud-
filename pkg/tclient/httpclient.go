@@ -12,9 +12,9 @@ import (
 	"go.uber.org/zap"
 )
 
-func HttpClient(logger *zap.Logger, dest string, stream pb.SocketConnection_InitConnectionClient, message string, id uint32, inJson []byte) {
+func HttpClient(logger *zap.Logger, dest string, stream pb.SocketConnectionService_InitConnectionClient, message string, id uint32, inJson []byte) {
 	log := logger.Named("HTTPClient")
-	
+
 	//-------http client
 	var req_struct pb.HttpData
 	err := json.Unmarshal(inJson, &req_struct)
@@ -32,7 +32,7 @@ func HttpClient(logger *zap.Logger, dest string, stream pb.SocketConnection_Init
 		log.Error("http.NewRequest", zap.String("Message", message))
 		return
 	}
-	
+
 	req_client.Header = req_struct.Header
 
 	var resp_struct pb.HttpData
@@ -88,7 +88,7 @@ func HttpClient(logger *zap.Logger, dest string, stream pb.SocketConnection_Init
 		return
 	}
 
-	if err := stream.Send(&pb.HttpReSp4Loc{
+	if err := stream.Send(&pb.InitConnectionRequest{
 		Id:      id,
 		Message: req_struct.Host,
 		Json:    jsonResp}); err != nil {

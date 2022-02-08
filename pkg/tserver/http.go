@@ -58,7 +58,7 @@ func (s *TunnelServer) StartHttpServer() *http.Server {
 			s.mutex.Unlock()
 		}()
 
-		err = host_soket.stream.Send(&pb.HttpReQuest2Loc{Id: rnd, Message: r.Host, Json: json_req})
+		err = host_soket.stream.Send(&pb.InitConnectionResponse{Id: rnd, Message: r.Host, Json: json_req})
 		if err != nil {
 			log.Error("Failed stream.Send", zap.String("Host", r.Host))
 			http.Error(w, "Failed stream.Send", http.StatusInternalServerError)

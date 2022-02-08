@@ -97,7 +97,7 @@ func main() {
 			}
 			defer conn.Close()
 
-			client := pb.NewSocketConnectionClient(conn)
+			client := pb.NewSocketConnectionServiceClient(conn)
 
 			stream, err := client.InitConnection(context.Background())
 			if err != nil {

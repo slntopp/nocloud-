@@ -86,7 +86,7 @@ func main() {
 
 	var kaep = keepalive.EnforcementPolicy{
 		MinTime:             time.Duration(keepalive_ping) * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
-		PermitWithoutStream: true,                                         // Allow pings even when there are no active streams           // send pings even without active streams
+		PermitWithoutStream: true,                                        // Allow pings even when there are no active streams           // send pings even without active streams
 	}
 
 	opts = append(opts, grpc.KeepaliveEnforcementPolicy(kaep))
@@ -121,7 +121,7 @@ func main() {
 	grpcServer := grpc.NewServer(opts...)
 	server := tserver.NewTunnelServer(log, db)
 	server.LoadHostFingerprintsFromDB()
-	pb.RegisterSocketConnectionServer(grpcServer, server)
+	pb.RegisterSocketConnectionServiceServer(grpcServer, server)
 
 	srv := server.StartHttpServer()
 	defer srv.Shutdown(context.TODO())

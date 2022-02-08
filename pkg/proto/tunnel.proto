@@ -3,23 +3,52 @@ package tunnel;
 
 option go_package = "github.com/slntopp/nocloud-tunnel-mesh";
 
-message httpReQuest2Loc {
+// InitConnection Messages for path http request from server to node
+//Basically server ask nodes by grpc Response and get responce by grpc Request %)
+message InitConnectionResponse {
     string message = 1;
     fixed32 id = 2;
     bytes json = 3;
 }
 
-message httpReSp4Loc {
+message InitConnectionRequest {
     string message = 1;
     fixed32 id = 2;
     bytes json = 3;
 }
 
-service SocketConnection {
-    rpc InitConnection(stream httpReSp4Loc) returns (stream httpReQuest2Loc) {};
+// LogConnection Messages for path own Docker container logs to server
+message LogConnectionRequest {
+    string log = 1;
+}
+message LogConnectionResponse {
+    fixed64 ts_start = 1;
+    bool follow = 2;
+    bool stop = 3;
 }
 
+service SocketConnectionService {
+    rpc InitConnection(stream InitConnectionRequest) returns (stream InitConnectionResponse) {};
+    rpc LogConnection(stream LogConnectionRequest) returns (stream LogConnectionResponse) {};
+}
+
+// Pathing couples Fingerprint-Host from DB
 message HostFingerprint {
     string fingerprint = 2;
     string host = 1;
+}
+
+//Pathing logs from server to admin panel
+message LogRequest {
+    string log = 1;
+}
+
+message LogResponse {
+    fixed64 ts_start = 1;
+    bool follow = 2;
+    bool stop = 3;
+}
+
+service LogService {
+    rpc Log(stream LogRequest) returns (stream LogResponse) {};
 }

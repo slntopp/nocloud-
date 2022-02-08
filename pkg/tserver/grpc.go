@@ -18,14 +18,14 @@ import (
 //Keeps all connections from clients (hosts) and ctx.WithCancel cut all http-requests if connection lost
 type tunnelHost struct {
 	ctx       context.Context
-	stream    pb.SocketConnection_InitConnectionServer
+	stream    pb.SocketConnectionService_InitConnectionServer
 	resetConn chan (error)
 }
 
 //struct for GRPC interface SocketConnectionServer and exchange data between methods
 type TunnelServer struct {
 	mutex sync.Mutex
-	pb.UnimplementedSocketConnectionServer
+	pb.UnimplementedSocketConnectionServiceServer
 	fingerprints_hosts map[string]string
 	hosts              map[string]tunnelHost
 	request_id         map[uint32]chan ([]byte)
@@ -84,15 +84,15 @@ func (s *TunnelServer) WaitForConnection(host string) error {
 		}
 	}()
 	select {
-    case <- r:
-        return nil
-    case <- time.After(30 * time.Second):
-        return errors.New("Connection timeout exceeded")
-    }
+	case <-r:
+		return nil
+	case <-time.After(30 * time.Second):
+		return errors.New("Connection timeout exceeded")
+	}
 }
 
 //Initiate soket connection from Location
-func (s *TunnelServer) InitConnection(stream pb.SocketConnection_InitConnectionServer) error {
+func (s *TunnelServer) InitConnection(stream pb.SocketConnectionService_InitConnectionServer) error {
 	log := s.log.Named("InitConnection")
 	peer, _ := peer.FromContext(stream.Context())
 	raw := peer.AuthInfo.(credentials.TLSInfo).State.PeerCertificates[0].Raw
