@@ -19,6 +19,7 @@ import (
 type tunnelHost struct {
 	ctx       context.Context
 	stream    pb.SocketConnectionService_InitConnectionServer
+	streamLog pb.SocketConnectionService_LogConnectionServer
 	resetConn chan (error)
 }
 
@@ -29,6 +30,7 @@ type TunnelServer struct {
 	fingerprints_hosts map[string]string
 	hosts              map[string]tunnelHost
 	request_id         map[uint32]chan ([]byte)
+	streamLogAdmin           pb.SocketConnectionService_LogAdminServer
 
 	col driver.Collection
 
@@ -94,6 +96,7 @@ func (s *TunnelServer) WaitForConnection(host string) error {
 //Initiate soket connection from Location
 func (s *TunnelServer) InitConnection(stream pb.SocketConnectionService_InitConnectionServer) error {
 	log := s.log.Named("InitConnection")
+	
 	peer, _ := peer.FromContext(stream.Context())
 	raw := peer.AuthInfo.(credentials.TLSInfo).State.PeerCertificates[0].Raw
 	hex_sert_raw := MakeFingerprint(raw)
@@ -109,8 +112,13 @@ func (s *TunnelServer) InitConnection(stream pb.SocketConnectionService_InitConn
 
 	ctx, cancel := context.WithCancel(context.Background())
 
+	newTH := tunnelHost{}
+	newTH.ctx = ctx
+	newTH.stream = stream
+	newTH.resetConn = make(chan error)
+
 	s.mutex.Lock()
-	s.hosts[host] = tunnelHost{ctx, stream, make(chan error)}
+	s.hosts[host] = newTH
 	s.mutex.Unlock()
 
 	defer func() {

@@ -111,7 +111,7 @@ func ExtractDataFromExtData(req *pb.ServicesProvidersExtentionData) (hostname st
 	if _, ok := data["fingerprint"]; !ok {
 		return "", "", errors.New("Fingerprint not given(key: fingerprint)")
 	}
-	hostname    = data["hostname"].(string)
+	hostname = data["hostname"].(string)
 	fingerprint = data["fingerprint"].(string)
 	return hostname, fingerprint, nil
 }
@@ -233,7 +233,7 @@ func (s *DBServerAPI) Unregister(ctx context.Context, in *pb.ServicesProvidersEx
 	log.Info("Remove doc with key from query", zap.String("key", meta.Key))
 
 	s.LoadHostFingerprintsFromDB()
-	
+
 	req := &tpb.HostFingerprint{
 		Fingerprint: fingerprint,
 		Host:        old_host,

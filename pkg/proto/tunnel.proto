@@ -20,16 +20,30 @@ message InitConnectionRequest {
 // LogConnection Messages for path own Docker container logs to server
 message LogConnectionRequest {
     string log = 1;
+    string err = 2;
 }
 message LogConnectionResponse {
     fixed64 ts_start = 1;
     bool follow = 2;
     bool stop = 3;
 }
+//Pathing logs from server to admin panel
+message LogRequest {
+    string host = 1;
+    fixed64 ts_start = 2;
+    bool follow = 3;
+    bool stop = 4;
+}
+
+message LogResponse {
+    string log = 1;
+    string err = 2;
+}
 
 service SocketConnectionService {
     rpc InitConnection(stream InitConnectionRequest) returns (stream InitConnectionResponse) {};
     rpc LogConnection(stream LogConnectionRequest) returns (stream LogConnectionResponse) {};
+    rpc LogAdmin(stream LogRequest) returns (stream LogResponse) {};
 }
 
 // Pathing couples Fingerprint-Host from DB
@@ -38,17 +52,3 @@ message HostFingerprint {
     string host = 1;
 }
 
-//Pathing logs from server to admin panel
-message LogRequest {
-    string log = 1;
-}
-
-message LogResponse {
-    fixed64 ts_start = 1;
-    bool follow = 2;
-    bool stop = 3;
-}
-
-service LogService {
-    rpc Log(stream LogRequest) returns (stream LogResponse) {};
-}

@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type SocketConnectionServiceClient interface {
 	InitConnection(ctx context.Context, opts ...grpc.CallOption) (SocketConnectionService_InitConnectionClient, error)
 	LogConnection(ctx context.Context, opts ...grpc.CallOption) (SocketConnectionService_LogConnectionClient, error)
+	LogAdmin(ctx context.Context, opts ...grpc.CallOption) (SocketConnectionService_LogAdminClient, error)
 }
 
 type socketConnectionServiceClient struct {
@@ -96,12 +97,44 @@ func (x *socketConnectionServiceLogConnectionClient) Recv() (*LogConnectionRespo
 	return m, nil
 }
 
+func (c *socketConnectionServiceClient) LogAdmin(ctx context.Context, opts ...grpc.CallOption) (SocketConnectionService_LogAdminClient, error) {
+	stream, err := c.cc.NewStream(ctx, &SocketConnectionService_ServiceDesc.Streams[2], "/tunnel.SocketConnectionService/LogAdmin", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &socketConnectionServiceLogAdminClient{stream}
+	return x, nil
+}
+
+type SocketConnectionService_LogAdminClient interface {
+	Send(*LogRequest) error
+	Recv() (*LogResponse, error)
+	grpc.ClientStream
+}
+
+type socketConnectionServiceLogAdminClient struct {
+	grpc.ClientStream
+}
+
+func (x *socketConnectionServiceLogAdminClient) Send(m *LogRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *socketConnectionServiceLogAdminClient) Recv() (*LogResponse, error) {
+	m := new(LogResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // SocketConnectionServiceServer is the server API for SocketConnectionService service.
 // All implementations must embed UnimplementedSocketConnectionServiceServer
 // for forward compatibility
 type SocketConnectionServiceServer interface {
 	InitConnection(SocketConnectionService_InitConnectionServer) error
 	LogConnection(SocketConnectionService_LogConnectionServer) error
+	LogAdmin(SocketConnectionService_LogAdminServer) error
 	mustEmbedUnimplementedSocketConnectionServiceServer()
 }
 
@@ -114,6 +147,9 @@ func (UnimplementedSocketConnectionServiceServer) InitConnection(SocketConnectio
 }
 func (UnimplementedSocketConnectionServiceServer) LogConnection(SocketConnectionService_LogConnectionServer) error {
 	return status.Errorf(codes.Unimplemented, "method LogConnection not implemented")
+}
+func (UnimplementedSocketConnectionServiceServer) LogAdmin(SocketConnectionService_LogAdminServer) error {
+	return status.Errorf(codes.Unimplemented, "method LogAdmin not implemented")
 }
 func (UnimplementedSocketConnectionServiceServer) mustEmbedUnimplementedSocketConnectionServiceServer() {
 }
@@ -181,6 +217,32 @@ func (x *socketConnectionServiceLogConnectionServer) Recv() (*LogConnectionReque
 	return m, nil
 }
 
+func _SocketConnectionService_LogAdmin_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(SocketConnectionServiceServer).LogAdmin(&socketConnectionServiceLogAdminServer{stream})
+}
+
+type SocketConnectionService_LogAdminServer interface {
+	Send(*LogResponse) error
+	Recv() (*LogRequest, error)
+	grpc.ServerStream
+}
+
+type socketConnectionServiceLogAdminServer struct {
+	grpc.ServerStream
+}
+
+func (x *socketConnectionServiceLogAdminServer) Send(m *LogResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *socketConnectionServiceLogAdminServer) Recv() (*LogRequest, error) {
+	m := new(LogRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // SocketConnectionService_ServiceDesc is the grpc.ServiceDesc for SocketConnectionService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -201,121 +263,9 @@ var SocketConnectionService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 			ClientStreams: true,
 		},
-	},
-	Metadata: "pkg/proto/tunnel.proto",
-}
-
-// LogServiceClient is the client API for LogService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type LogServiceClient interface {
-	Log(ctx context.Context, opts ...grpc.CallOption) (LogService_LogClient, error)
-}
-
-type logServiceClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewLogServiceClient(cc grpc.ClientConnInterface) LogServiceClient {
-	return &logServiceClient{cc}
-}
-
-func (c *logServiceClient) Log(ctx context.Context, opts ...grpc.CallOption) (LogService_LogClient, error) {
-	stream, err := c.cc.NewStream(ctx, &LogService_ServiceDesc.Streams[0], "/tunnel.LogService/Log", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &logServiceLogClient{stream}
-	return x, nil
-}
-
-type LogService_LogClient interface {
-	Send(*LogRequest) error
-	Recv() (*LogResponse, error)
-	grpc.ClientStream
-}
-
-type logServiceLogClient struct {
-	grpc.ClientStream
-}
-
-func (x *logServiceLogClient) Send(m *LogRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *logServiceLogClient) Recv() (*LogResponse, error) {
-	m := new(LogResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-// LogServiceServer is the server API for LogService service.
-// All implementations must embed UnimplementedLogServiceServer
-// for forward compatibility
-type LogServiceServer interface {
-	Log(LogService_LogServer) error
-	mustEmbedUnimplementedLogServiceServer()
-}
-
-// UnimplementedLogServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedLogServiceServer struct {
-}
-
-func (UnimplementedLogServiceServer) Log(LogService_LogServer) error {
-	return status.Errorf(codes.Unimplemented, "method Log not implemented")
-}
-func (UnimplementedLogServiceServer) mustEmbedUnimplementedLogServiceServer() {}
-
-// UnsafeLogServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to LogServiceServer will
-// result in compilation errors.
-type UnsafeLogServiceServer interface {
-	mustEmbedUnimplementedLogServiceServer()
-}
-
-func RegisterLogServiceServer(s grpc.ServiceRegistrar, srv LogServiceServer) {
-	s.RegisterService(&LogService_ServiceDesc, srv)
-}
-
-func _LogService_Log_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(LogServiceServer).Log(&logServiceLogServer{stream})
-}
-
-type LogService_LogServer interface {
-	Send(*LogResponse) error
-	Recv() (*LogRequest, error)
-	grpc.ServerStream
-}
-
-type logServiceLogServer struct {
-	grpc.ServerStream
-}
-
-func (x *logServiceLogServer) Send(m *LogResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *logServiceLogServer) Recv() (*LogRequest, error) {
-	m := new(LogRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-// LogService_ServiceDesc is the grpc.ServiceDesc for LogService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var LogService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "tunnel.LogService",
-	HandlerType: (*LogServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Log",
-			Handler:       _LogService_Log_Handler,
+			StreamName:    "LogAdmin",
+			Handler:       _SocketConnectionService_LogAdmin_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

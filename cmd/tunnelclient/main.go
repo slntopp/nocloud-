@@ -11,6 +11,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -45,6 +46,55 @@ func init() {
 	keepalive_timeout = viper.GetInt("KEEPALIVE_TIMEOUT")
 }
 
+//Stream for log data
+func runLogConnection(ctx context.Context, client pb.SocketConnectionServiceClient) func() error {
+	return func() error {
+
+		stream, err := client.LogConnection(ctx)
+		if err != nil {
+			log.Error("Failed LogConnection", zap.Error(err))
+			return err
+		}
+
+		log.Info("Connected to stream LogConnection", zap.String("host", host), zap.Skip())
+
+		return tclient.LogConnection(ctx, log, stream)
+
+	}
+}
+
+//Stream for http data
+func runInitConnection(ctx context.Context, client pb.SocketConnectionServiceClient) func() error {
+	return func() (err error) {
+
+		stream, err := client.InitConnection(ctx)
+		if err != nil {
+			log.Error("Failed InitTunnel", zap.Error(err))
+			return err
+		}
+
+		log.Info("Connected to stream InitConnection", zap.String("host", host), zap.Skip())
+
+		for {
+			in, err := stream.Recv()
+			if err == io.EOF {
+				log.Info("Connection closed", zap.Error(err))
+				break
+			}
+			if err != nil {
+				log.Error("Failed to receive a note InitConnection", zap.Error(err))
+				break
+			}
+
+			log.Debug("Received request from server:", zap.String("Message", in.Message), zap.Skip())
+
+			//TODO send errors from httpClient
+			go tclient.HttpClient(log, dest, stream, in.Message, in.Id, in.Json)
+		}
+		return nil
+	}
+}
+
 func main() {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -71,7 +121,7 @@ func main() {
 	var kacp = keepalive.ClientParameters{
 		Time:                time.Duration(keepalive_ping) * time.Second,    // send pings every keepalive_ping seconds if there is no activity
 		Timeout:             time.Duration(keepalive_timeout) * time.Second, // wait timeout second for ping back
-		PermitWithoutStream: true,                                          // send pings even without active streams
+		PermitWithoutStream: true,                                           // send pings even without active streams
 	}
 
 	opts = append(opts, grpc.WithKeepaliveParams(kacp))
@@ -92,36 +142,21 @@ func main() {
 
 			if err != nil {
 				log.Error("fail to dial:", zap.Error(err))
-				panic(1)
-				//return
+				return
 			}
 			defer conn.Close()
 
 			client := pb.NewSocketConnectionServiceClient(conn)
 
-			stream, err := client.InitConnection(context.Background())
-			if err != nil {
-				log.Error("Failed InitTunnel", zap.Error(err))
+			errgr, ctx := errgroup.WithContext(context.Background())
+
+				errgr.Go(runLogConnection(ctx, client))
+
+			errgr.Go(runInitConnection(ctx, client))
+
+			if err := errgr.Wait(); err != nil {
+				log.Error("fail sterams connection:", zap.Error(err))
 				return
-			}
-
-			log.Info("Connected to server:", zap.String("host", host), zap.Skip())
-
-			for {
-				in, err := stream.Recv()
-				if err == io.EOF {
-					log.Info("Connection closed", zap.Error(err))
-					break
-				}
-				if err != nil {
-					log.Error("Failed to receive a note:", zap.Error(err))
-					break
-				}
-
-				log.Debug("Received request from server:", zap.String("Message", in.Message), zap.Skip())
-
-				//TODO send errors from httpClient
-				go tclient.HttpClient(log, dest, stream, in.Message, in.Id, in.Json)
 			}
 		}()
 
