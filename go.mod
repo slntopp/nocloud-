@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/arangodb/go-driver v1.3.1
-	github.com/docker/docker v20.10.15+incompatible
+	github.com/docker/docker v20.10.16+incompatible
 	github.com/slntopp/nocloud v0.0.0-20211227210000-5e512c99e63f
 	github.com/spf13/viper v1.11.0
 	go.uber.org/zap v1.21.0
