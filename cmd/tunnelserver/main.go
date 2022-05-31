@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/slntopp/nocloud-tunnel-mesh/pkg/acme"
 	pb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
 	"github.com/slntopp/nocloud-tunnel-mesh/pkg/tserver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -25,6 +26,7 @@ var (
 	arangodbCred      string
 	keepalive_ping    int
 	keepalive_timeout int
+	acme_path         string
 )
 
 func init() {
@@ -38,12 +40,14 @@ func init() {
 	viper.SetDefault("DB_GRPC_PORT", "8000")
 	viper.SetDefault("KEEPALIVE_PINGS_EVERY", "5")
 	viper.SetDefault("KEEPALIVE_TIMEOUT", "2")
+	viper.SetDefault("ACME", "")
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
 	port = viper.GetString("GRPC_PORT")
 	keepalive_ping = viper.GetInt("KEEPALIVE_PINGS_EVERY")
 	keepalive_timeout = viper.GetInt("KEEPALIVE_TIMEOUT")
+	acme_path = viper.GetString("ACME")
 }
 
 func main() {
@@ -67,8 +71,14 @@ func main() {
 
 	var opts []grpc.ServerOption
 
-	//openssl req -new -newkey rsa:4096 -x509 -sha256 -days 30 -nodes -out server.crt -keyout server.key
-	cert, err := tls.LoadX509KeyPair("/cert/tls.crt", "/cert/tls.key")
+	var cert tls.Certificate
+	if acme_path != "" {
+		cert, err = acme.Load(acme_path)
+	} else {
+		//openssl req -new -newkey rsa:4096 -x509 -sha256 -days 30 -nodes -out server.crt -keyout server.key
+		cert, err = tls.LoadX509KeyPair("/cert/tls.crt", "/cert/tls.key")
+	}
+
 	if err != nil {
 		log.Fatal("server: loadkeys:", zap.Error(err))
 	}
