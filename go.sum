@@ -205,8 +205,8 @@ github.com/rs/zerolog v1.19.0/go.mod h1:IzD0RJ65iWH0w97OQQebJEvTZYvsCUm9WVLWBQrJ
 github.com/sirupsen/logrus v1.7.0/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.8.1 h1:dJKuHgqk1NNQlqoA6BTlM1Wf9DOH3NBjQyu0h9+AZZE=
 github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
-github.com/slntopp/nocloud v0.0.15-r15 h1:C9wmkN59DEH7ADKMPcmGt57j6onM9o8On1IH01J14jA=
-github.com/slntopp/nocloud v0.0.15-r15/go.mod h1:B9AwQmsEhghfaglBBU6+iLgoPkSLN/xwXEwemR4L39U=
+github.com/slntopp/nocloud v0.0.15-r16 h1:CiAQfuL8+xwGc5UkEplsyGY3DdABRW11zVgtgSZO5hA=
+github.com/slntopp/nocloud v0.0.15-r16/go.mod h1:VnL8frhDLUYaveuEKEUMwu+9UhRLBDaEZS87U7WuWg8=
 github.com/spf13/afero v1.8.2 h1:xehSyVa0YnHWsJ49JFljMpg1HX19V6NDZ1fkm1Xznbo=
 github.com/spf13/afero v1.8.2/go.mod h1:CtAatgMJh6bJEIs48Ay/FOnkljP3WeGUG0MC1RfAqwo=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
