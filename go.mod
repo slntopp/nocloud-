@@ -7,7 +7,7 @@ require (
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/slntopp/nocloud v0.0.15-r15
 	github.com/spf13/viper v1.12.0
-	go.uber.org/zap v1.22.0
+	go.uber.org/zap v1.23.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.49.0
 	google.golang.org/protobuf v1.28.1
