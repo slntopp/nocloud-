@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/arangodb/go-driver v1.3.3
 	github.com/docker/docker v20.10.18+incompatible
-	github.com/slntopp/nocloud v0.0.15-r17
+	github.com/slntopp/nocloud v0.0.15-r19
 	github.com/spf13/viper v1.13.0
 	go.uber.org/zap v1.23.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
