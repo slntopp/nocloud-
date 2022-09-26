@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/arangodb/go-driver v1.3.3
 	github.com/docker/docker v20.10.18+incompatible
-	github.com/slntopp/nocloud v0.0.15-r19
+	github.com/slntopp/nocloud v0.0.16-r00
 	github.com/spf13/viper v1.13.0
 	go.uber.org/zap v1.23.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
@@ -41,11 +41,11 @@ require (
 	github.com/subosito/gotenv v1.4.1 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
-	golang.org/x/sys v0.0.0-20220721230656-c6bc011c0c49 // indirect
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591 // indirect
+	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	google.golang.org/genproto v0.0.0-20220822174746-9e6da59bd2fc // indirect
+	google.golang.org/genproto v0.0.0-20220920201722-2b89144ce006 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
