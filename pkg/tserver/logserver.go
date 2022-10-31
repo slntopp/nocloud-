@@ -16,7 +16,7 @@ func init() {
 	startLogConnectionStriam = make(chan (string))
 }
 
-//Getting container logs
+// Getting container logs
 func (s *TunnelServer) LogConnection(stream pb.SocketConnectionService_LogConnectionServer) error {
 	log := s.log.Named("LogConnection")
 
@@ -66,7 +66,7 @@ func (s *TunnelServer) LogConnection(stream pb.SocketConnectionService_LogConnec
 	return err_global
 }
 
-//Getting container logs
+// Getting container logs
 func (s *TunnelServer) Log(stream pb.SocketConnectionService_LogAdminServer) error {
 	log := s.log.Named("Log")
 

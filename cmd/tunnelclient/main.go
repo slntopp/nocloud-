@@ -26,6 +26,7 @@ var (
 	dest              string
 	keepalive_ping    int
 	keepalive_timeout int
+	logs              bool
 )
 
 func init() {
@@ -38,15 +39,17 @@ func init() {
 	viper.SetDefault("SECURE", true)
 	viper.SetDefault("KEEPALIVE_PINGS_EVERY", "10") //should be largest than EnforcementPolicy on server
 	viper.SetDefault("KEEPALIVE_TIMEOUT", "2")
+	viper.SetDefault("LOGS_CLIENT", false)
 
 	host = viper.GetString("TUNNEL_HOST")
 	secure = viper.GetBool("SECURE")
 	dest = viper.GetString("DESTINATION_HOST")
 	keepalive_ping = viper.GetInt("KEEPALIVE_PINGS_EVERY")
 	keepalive_timeout = viper.GetInt("KEEPALIVE_TIMEOUT")
+	logs = viper.GetBool("LOGS_CLIENT")
 }
 
-//Stream for log data
+// Stream for log data
 func runLogConnection(ctx context.Context, client pb.SocketConnectionServiceClient) func() error {
 	return func() error {
 
@@ -63,7 +66,7 @@ func runLogConnection(ctx context.Context, client pb.SocketConnectionServiceClie
 	}
 }
 
-//Stream for http data
+// Stream for http data
 func runInitConnection(ctx context.Context, client pb.SocketConnectionServiceClient) func() error {
 	return func() (err error) {
 
@@ -131,7 +134,10 @@ func main() {
 	for {
 
 		func() {
-			defer time.Sleep(5 * time.Second)
+			defer func() {
+				log.Info("Waiting before new attempt")
+				time.Sleep(5 * time.Second)
+			}()
 
 			log.Info("Try to connect...", zap.String("host", host), zap.Skip())
 
@@ -150,7 +156,9 @@ func main() {
 
 			errgr, ctx := errgroup.WithContext(context.Background())
 
+			if logs {
 				errgr.Go(runLogConnection(ctx, client))
+			}
 
 			errgr.Go(runInitConnection(ctx, client))
 
