@@ -1,6 +1,6 @@
 module github.com/slntopp/nocloud-tunnel-mesh
 
-go 1.18
+go 1.19
 
 require (
 	github.com/arangodb/go-driver v1.4.0
