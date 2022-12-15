@@ -6,6 +6,7 @@ require (
 	github.com/arangodb/go-driver v1.4.0
 	github.com/docker/docker v20.10.21+incompatible
 	github.com/slntopp/nocloud v0.0.17
+	github.com/slntopp/nocloud-proto v0.0.0-20221122151021-7e8158586b2e
 	github.com/spf13/viper v1.14.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/sync v0.1.0
@@ -22,6 +23,7 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.14.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect

@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/spf13/viper"
 )
 

@@ -9,8 +9,8 @@ import (
 	"net"
 
 	driver "github.com/arangodb/go-driver"
+	pb "github.com/slntopp/nocloud-proto/services_providers"
 	tpb "github.com/slntopp/nocloud-tunnel-mesh/pkg/proto"
-	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -49,7 +49,7 @@ func EnsureCollectionExists(logger *zap.Logger, db driver.Database) {
 
 }
 
-//Make hash od raw sertificate as sha256
+// Make hash od raw sertificate as sha256
 func MakeFingerprint(c []byte) string {
 	sum := sha256.Sum256(c)
 	return hex.EncodeToString(sum[:])
@@ -60,7 +60,7 @@ type HostsFingerprintsPair struct {
 	Host        string `json:"host"`
 }
 
-//Gets fingerprint-host chain from DB
+// Gets fingerprint-host chain from DB
 func (s *TunnelServer) LoadHostFingerprintsFromDB() {
 	log := s.log.Named("LoadHostFingerprintsFromDB")
 	// fp := "419d3335b2b533526d4e7f6f1041b3c492d086cad0f5876739800ffd51659545"
@@ -131,7 +131,7 @@ func (s *DBServerAPI) Test(ctx context.Context, req *pb.ServicesProvidersExtenti
 	return &pb.GenericResponse{Result: true}, nil
 }
 
-//Add host/Fingerprint to DB
+// Add host/Fingerprint to DB
 func (s *DBServerAPI) Register(ctx context.Context, in *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
 	log := s.log.Named("Register")
 
@@ -167,7 +167,7 @@ func (s *DBServerAPI) Register(ctx context.Context, in *pb.ServicesProvidersExte
 	return &pb.GenericResponse{Result: true}, nil
 }
 
-//Edit host/Fingerprint to DB
+// Edit host/Fingerprint to DB
 func (s *DBServerAPI) Update(ctx context.Context, in *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
 	log := s.log.Named("Update")
 
@@ -210,7 +210,7 @@ func (s *DBServerAPI) Update(ctx context.Context, in *pb.ServicesProvidersExtent
 	return &pb.GenericResponse{Result: true}, nil
 }
 
-//Delete host/Fingerprint to DB
+// Delete host/Fingerprint to DB
 func (s *DBServerAPI) Unregister(ctx context.Context, in *pb.ServicesProvidersExtentionData) (*pb.GenericResponse, error) {
 	log := s.log.Named("Unregister")
 
@@ -243,7 +243,7 @@ func (s *DBServerAPI) Unregister(ctx context.Context, in *pb.ServicesProvidersEx
 	return &pb.GenericResponse{Result: true}, nil
 }
 
-//Start grpc server to update fingerprint-host database
+// Start grpc server to update fingerprint-host database
 func (s *TunnelServer) StartDBgRPCServer() *grpc.Server {
 	log := s.log.Named("dbServer")
 	port := viper.GetString("DB_GRPC_PORT")
