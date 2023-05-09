@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/arangodb/go-driver v1.5.2
-	github.com/docker/docker v23.0.5+incompatible
+	github.com/docker/docker v23.0.6+incompatible
 	github.com/slntopp/nocloud v0.0.17
 	github.com/slntopp/nocloud-proto v0.0.0-20221122151021-7e8158586b2e
 	github.com/spf13/viper v1.15.0
