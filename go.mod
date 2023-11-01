@@ -3,7 +3,7 @@ module github.com/slntopp/nocloud-tunnel-mesh
 go 1.19
 
 require (
-	github.com/arangodb/go-driver v1.6.0
+	github.com/arangodb/go-driver v1.6.1
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/slntopp/nocloud v0.0.18
 	github.com/slntopp/nocloud-proto v0.0.0-20230928084001-11a2827103dc
